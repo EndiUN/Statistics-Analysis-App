@@ -26,10 +26,14 @@ const InfoModal = ({ visible, title, message, onClose }) => {
           <Text style={styles.title}>{title}</Text>
           <View style={styles.divider} />
           <Text style={styles.message}>{message}</Text>
-
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>Got it</Text>
-          </TouchableOpacity>
+          <View style={styles.divider} />
+          <View
+            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+          >
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Text style={styles.closeButtonText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
@@ -46,7 +50,7 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: "100%",
-    maxWidth: 400, // Good for web layout
+    maxWidth: 600, // Good for web layout
     backgroundColor: "white",
     borderRadius: 12,
     padding: 20,
@@ -57,23 +61,26 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   title: {
-    fontSize: 18,
+    textAlign: "center",
+    fontSize: 32,
     fontWeight: "bold",
     color: "#333",
     marginBottom: 10,
   },
   divider: {
-    height: 1,
+    height: 3,
     backgroundColor: "#eee",
     marginBottom: 15,
   },
   message: {
-    fontSize: 14,
+    textAlign: "center",
+    fontSize: 18,
     color: "#666",
     lineHeight: 20,
     marginBottom: 20,
   },
   closeButton: {
+    width: "50%",
     backgroundColor: "#2563eb",
     paddingVertical: 12,
     borderRadius: 8,
@@ -82,7 +89,7 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: "white",
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: 24,
   },
 });
 
