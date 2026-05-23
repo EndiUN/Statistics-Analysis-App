@@ -134,7 +134,7 @@ describe('Minitool2Page — initial render', () => {
     await renderPage();
 
     // Open the modal where saved DB scenarios are listed
-    fireEvent.press(screen.getByText('Save/Load Scenario'));
+    fireEvent.press(screen.getByText('Save / Load'));
 
     await waitFor(() => {
       expect(screen.getByText(dbScenario.name)).toBeTruthy();
@@ -147,7 +147,7 @@ describe('Minitool2Page — save flow', () => {
   test('alerts when the user tries to save without a name', async () => {
     await renderPage();
 
-    fireEvent.press(screen.getByText('Save/Load Scenario'));
+    fireEvent.press(screen.getByText('Save / Load'));
     await waitFor(() =>
       expect(screen.getByPlaceholderText('Enter scenario name')).toBeTruthy(),
     );
@@ -166,7 +166,7 @@ describe('Minitool2Page — save flow', () => {
 
     await renderPage();
 
-    fireEvent.press(screen.getByText('Save/Load Scenario'));
+    fireEvent.press(screen.getByText('Save / Load'));
     await waitFor(() =>
       expect(screen.getByPlaceholderText('Enter scenario name')).toBeTruthy(),
     );
@@ -196,7 +196,7 @@ describe('Minitool2Page — delete flow', () => {
 
     await renderPage();
 
-    fireEvent.press(screen.getByText('Save/Load Scenario'));
+    fireEvent.press(screen.getByText('Save / Load'));
     await waitFor(() => screen.getByText(dbScenario.name));
     fireEvent.press(screen.getByText('Delete'));
 
@@ -212,7 +212,7 @@ describe('Minitool2Page — upload modal', () => {
     await renderPage();
 
     expect(screen.queryByTestId('upload-scenario-modal')).toBeNull();
-    fireEvent.press(screen.getByText('Upload Scenario from File'));
+    fireEvent.press(screen.getByText('Upload from File'));
     expect(screen.getByTestId('upload-scenario-modal')).toBeTruthy();
   });
 });

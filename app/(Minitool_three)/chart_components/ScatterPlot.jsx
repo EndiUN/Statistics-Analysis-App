@@ -1,6 +1,13 @@
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
-import Svg, { Circle, Line, Text as SvgText, G, Rect } from "react-native-svg";
+import Svg, {
+  Circle,
+  Line,
+  Text as SvgText,
+  G,
+  Rect,
+  Polygon,
+} from "react-native-svg";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import { scaleLinear } from "d3-scale";
 import useStatistics from "./useStatistics";
@@ -15,29 +22,38 @@ const ScatterPlot = ({
   activeGrid = null,
   twoGroupsCount = null,
   fourGroupsCount = null,
-  selectedPoint = null,
-  onPointSelect,
+  // Multi-select: array of selected point indices. Parent owns the state and
+  // toggles entries via onPointToggle (kept compatible with single-select
+  // callers by passing `[idx]` / `[]`).
+  selectedPoints = [],
+  onPointToggle,
   onScrollEnabled,
+  isMobile = false,
 }) => {
   const { width: windowWidth } = useDimensions();
   const containerWidth = widthProp ?? windowWidth;
 
   // ── Chart geometry constants ──────────────────────────────
   const isCompact = containerWidth < 600;
-  const CHART_WIDTH = Math.max(280, containerWidth - (isCompact ? 20 : 40));
-  const CHART_HEIGHT = heightProp ?? (isCompact ? 320 : 500);
-  const PADDING = isCompact ? 24 : 40;
-  // Reserve extra space on the left for the rotated "Y Variable" label
-  // and along the bottom for the "X Variable" label so they never overlap
-  // the tick numbers.
+  const CHART_WIDTH = Math.max(300, containerWidth - (isCompact ? 20 : 40));
+  const CHART_HEIGHT = isMobile ? CHART_WIDTH * 1.3 : CHART_WIDTH * 0.75; // 4:3 aspect ratio, good for data distribution and mobile screens.
+  const PADDING = isCompact ? 12 : 40;
   const Y_AXIS_LABEL_WIDTH = isCompact ? 18 : 22;
   const X_AXIS_LABEL_HEIGHT = isCompact ? 18 : 22;
-  const Y_AXIS_WIDTH = (isCompact ? 40 : 50) + Y_AXIS_LABEL_WIDTH;
+  const Y_AXIS_WIDTH = (isCompact ? 32 : 50) + Y_AXIS_LABEL_WIDTH;
   const X_AXIS_HEIGHT = (isCompact ? 32 : 40) + X_AXIS_LABEL_HEIGHT;
   const PLOT_LEFT = Y_AXIS_WIDTH + PADDING;
   const PLOT_RIGHT = CHART_WIDTH - PADDING;
   const PLOT_TOP = PADDING;
   const PLOT_BOTTOM = CHART_HEIGHT - X_AXIS_HEIGHT - PADDING;
+
+  // Size of the invisible square overlay that captures cross-handle drags.
+  // Large enough to grab comfortably with a finger, small enough that it
+  // doesn't swallow taps on nearby data points.
+  const CROSS_HIT_SIZE = 56;
+
+  // Fast membership lookup for multi-selection.
+  const selectedSet = useMemo(() => new Set(selectedPoints), [selectedPoints]);
 
   // ── Scales (memoised) ────────────────────────────────────────
   const { xScale, yScale, xDomain, yDomain, xTickValues, yTickValues } =
@@ -87,39 +103,59 @@ const ScatterPlot = ({
   const midDataX = (xDomain[0] + xDomain[1]) / 2;
   const midDataY = (yDomain[0] + yDomain[1]) / 2;
   const [crossCenter, setCrossCenter] = useState({ x: midDataX, y: midDataY });
-  // Keep the cross centred when domain changes (dataset switch)
+  // Keep the cross centred when domain changes (dataset switch).
+  // Calling setCrossCenter during render is safe in React 18+ when guarded
+  // by a condition — React restarts the render with the new state. The
+  // previous code directly mutated crossCenter.x/y which is illegal and
+  // could cause "Rendered fewer hooks than expected" errors.
   const prevDomainRef = useRef(null);
   const domainKey = `${xDomain[0]},${xDomain[1]},${yDomain[0]},${yDomain[1]}`;
   if (prevDomainRef.current !== domainKey) {
     prevDomainRef.current = domainKey;
-    // reset to centre of new domain
-    crossCenter.x = midDataX;
-    crossCenter.y = midDataY;
+    setCrossCenter({ x: midDataX, y: midDataY });
   }
 
   const crossStartRef = useRef({ x: 0, y: 0 });
 
-  const panGesture = Gesture.Pan()
-    .onBegin(() => {
-      crossStartRef.current = { ...crossCenter };
-      onScrollEnabled?.(false);
-    })
-    .onUpdate((e) => {
-      const dataX =
-        crossStartRef.current.x +
-        e.translationX / ((PLOT_RIGHT - PLOT_LEFT) / (xDomain[1] - xDomain[0]));
-      const dataY =
-        crossStartRef.current.y -
-        e.translationY / ((PLOT_BOTTOM - PLOT_TOP) / (yDomain[1] - yDomain[0]));
-      // Clamp within domain
-      const cx = Math.max(xDomain[0], Math.min(xDomain[1], dataX));
-      const cy = Math.max(yDomain[0], Math.min(yDomain[1], dataY));
-      setCrossCenter({ x: cx, y: cy });
-    })
-    .onEnd(() => {
-      onScrollEnabled?.(true);
-    })
-    .minDistance(0);
+  // .runOnJS(true) is critical on Android: without it, .onBegin/.onUpdate
+  // are worklets on the UI thread where mutating `crossStartRef.current`
+  // silently no-ops AND calling React's `setCrossCenter` from the wrong
+  // thread crashes the app. Forcing the JS thread makes both safe.
+  const panGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .runOnJS(true)
+        .minDistance(0)
+        .onBegin(() => {
+          crossStartRef.current = { x: crossCenter.x, y: crossCenter.y };
+          onScrollEnabled?.(false);
+        })
+        .onUpdate((e) => {
+          const dataX =
+            crossStartRef.current.x +
+            e.translationX /
+              ((PLOT_RIGHT - PLOT_LEFT) / (xDomain[1] - xDomain[0]));
+          const dataY =
+            crossStartRef.current.y -
+            e.translationY /
+              ((PLOT_BOTTOM - PLOT_TOP) / (yDomain[1] - yDomain[0]));
+          const cx = Math.max(xDomain[0], Math.min(xDomain[1], dataX));
+          const cy = Math.max(yDomain[0], Math.min(yDomain[1], dataY));
+          setCrossCenter({ x: cx, y: cy });
+        })
+        .onEnd(() => onScrollEnabled?.(true)),
+    [
+      crossCenter.x,
+      crossCenter.y,
+      xDomain,
+      yDomain,
+      PLOT_RIGHT,
+      PLOT_LEFT,
+      PLOT_BOTTOM,
+      PLOT_TOP,
+      onScrollEnabled,
+    ],
+  );
 
   // ── Statistics hook ───────────────────────────────────────────
   const { gridData, quadrantCounts, twoGroupSlices, fourGroupSlices } =
@@ -133,14 +169,12 @@ const ScatterPlot = ({
       yDomain,
     });
 
-  // ── Tap to select a point ─────────────────────────────────────
+  // ── Tap to (de)select a point ─────────────────────────────────
   const handlePointTap = useCallback(
     (index) => {
-      if (onPointSelect) {
-        onPointSelect(selectedPoint === index ? null : index);
-      }
+      onPointToggle?.(index);
     },
-    [onPointSelect, selectedPoint],
+    [onPointToggle],
   );
 
   // ── SVG layer: grid overlay ───────────────────────────────────
@@ -188,16 +222,18 @@ const ScatterPlot = ({
   };
 
   // ── SVG layer: cross (quadrant) overlay ───────────────────────
-  const renderCrossOverlay = () => {
+  const crossPixelCenter = useMemo(() => {
     if (!showCross) return null;
-    const cx = xScale(crossCenter.x);
-    const cy = yScale(crossCenter.y);
+    return { cx: xScale(crossCenter.x), cy: yScale(crossCenter.y) };
+  }, [showCross, crossCenter.x, crossCenter.y, xScale, yScale]);
 
+  const renderCrossOverlay = () => {
+    if (!showCross || !crossPixelCenter) return null;
+    const { cx, cy } = crossPixelCenter;
     const counts = quadrantCounts || [0, 0, 0, 0];
 
     return (
       <G>
-        {/* Vertical line */}
         <Line
           x1={cx}
           y1={PLOT_TOP}
@@ -207,7 +243,6 @@ const ScatterPlot = ({
           strokeWidth="2"
           strokeDasharray="6,3"
         />
-        {/* Horizontal line */}
         <Line
           x1={PLOT_LEFT}
           y1={cy}
@@ -217,11 +252,10 @@ const ScatterPlot = ({
           strokeWidth="2"
           strokeDasharray="6,3"
         />
-        {/* Center handle */}
-        <Circle cx={cx} cy={cy} r="8" fill="#dc2626" opacity="0.8" />
+        {/* Center handle (visual). The drag gesture is on an overlay View. */}
+        <Circle cx={cx} cy={cy} r="10" fill="#dc2626" opacity="0.85" />
         <Circle cx={cx} cy={cy} r="3" fill="#fff" />
 
-        {/* Quadrant counts: TL, TR, BL, BR */}
         <SvgText
           x={PLOT_LEFT + 10}
           y={PLOT_TOP + 18}
@@ -264,426 +298,181 @@ const ScatterPlot = ({
     );
   };
 
-  // ── SVG layer: two-group slicing ──────────────────────────────
-  const renderTwoGroupsOverlay = () => {
-    if (!twoGroupSlices) return null;
-    return (
-      <G>
-        {twoGroupSlices.map((s, i) => {
-          const x1 = xScale(s.xLo);
-          const x2 = xScale(s.xHi);
-          const xMid = (x1 + x2) / 2;
+  // ── Box-style overlay used by both 2-group and 4-group modes ──
+  // Renders a translucent box from `low` → `high` with a bold median line.
+  // For 4-group mode we additionally darken/inset a Q1→Q3 inner box so the
+  // only visual difference between modes is *how many* boxes appear.
+  const renderBoxSlice = (key, s, color, fillColor, withQuartiles) => {
+    if (s.count === 0) return null;
+    const x1 = xScale(s.xLo);
+    const x2 = xScale(s.xHi);
+    const inset = (x2 - x1) * 0.15;
+    const bx1 = x1 + inset;
+    const bx2 = x2 - inset;
+    const lowY = yScale(s.low);
+    const highY = yScale(s.high);
+    const medY = yScale(s.median);
 
-          // Slice boundary
-          if (i > 0) {
-            return null; // we draw boundaries below
-          }
-          return null;
-        })}
-        {/* Slice boundaries */}
-        {twoGroupSlices.map((s, i) => (
-          <G key={`two-boundary-${i}`}>
-            {i > 0 && (
-              <Line
-                x1={xScale(s.xLo)}
-                y1={PLOT_TOP}
-                x2={xScale(s.xLo)}
-                y2={PLOT_BOTTOM}
-                stroke="#7c3aed"
-                strokeWidth="1"
-                strokeDasharray="4,3"
-              />
-            )}
-          </G>
-        ))}
-        {/* Stats per slice */}
-        {twoGroupSlices.map((s, i) => {
-          if (s.count === 0) return null;
-          const x1 = xScale(s.xLo);
-          const x2 = xScale(s.xHi);
-          const xMid = (x1 + x2) / 2;
-          const medY = yScale(s.median);
-          const lowY = yScale(s.low);
-          const highY = yScale(s.high);
-
-          return (
-            <G key={`two-stats-${i}`}>
-              {/* Median line */}
-              <Line
-                x1={x1 + 4}
-                y1={medY}
-                x2={x2 - 4}
-                y2={medY}
-                stroke="#7c3aed"
-                strokeWidth="2.5"
-              />
-              {/* Low line */}
-              <Line
-                x1={x1 + 4}
-                y1={lowY}
-                x2={x2 - 4}
-                y2={lowY}
-                stroke="#7c3aed"
-                strokeWidth="1.5"
-              />
-              {/* High line */}
-              <Line
-                x1={x1 + 4}
-                y1={highY}
-                x2={x2 - 4}
-                y2={highY}
-                stroke="#7c3aed"
-                strokeWidth="1.5"
-              />
-              {/* Vertical whisker connecting low → high */}
-              <Line
-                x1={xMid}
-                y1={lowY}
-                x2={xMid}
-                y2={highY}
-                stroke="#7c3aed"
-                strokeWidth="1"
-                strokeDasharray="3,2"
-              />
-              {/* Labels */}
-              <SvgText
-                x={xMid}
-                y={medY - 5}
-                fontSize="9"
-                textAnchor="middle"
-                fill="#7c3aed"
-                fontWeight="bold"
-              >
-                Med {Math.round(s.median)}
-              </SvgText>
-            </G>
-          );
-        })}
-      </G>
-    );
-  };
-
-  // ── SVG layer: four-group slicing (box-whisker) ───────────────
-  const renderFourGroupsOverlay = () => {
-    if (!fourGroupSlices) return null;
-    return (
-      <G>
-        {/* Slice boundaries */}
-        {fourGroupSlices.map((s, i) => (
-          <G key={`four-boundary-${i}`}>
-            {i > 0 && (
-              <Line
-                x1={xScale(s.xLo)}
-                y1={PLOT_TOP}
-                x2={xScale(s.xLo)}
-                y2={PLOT_BOTTOM}
-                stroke="#0891b2"
-                strokeWidth="1"
-                strokeDasharray="4,3"
-              />
-            )}
-          </G>
-        ))}
-        {/* Box-whisker per slice */}
-        {fourGroupSlices.map((s, i) => {
-          if (s.count === 0) return null;
-          const x1 = xScale(s.xLo);
-          const x2 = xScale(s.xHi);
-          const xMid = (x1 + x2) / 2;
-          const boxInset = (x2 - x1) * 0.15;
-          const bx1 = x1 + boxInset;
-          const bx2 = x2 - boxInset;
-
-          const lowY = yScale(s.low);
-          const highY = yScale(s.high);
-          const medY = yScale(s.median);
-          const q1Y = s.q1 != null ? yScale(s.q1) : medY;
-          const q3Y = s.q3 != null ? yScale(s.q3) : medY;
-
-          return (
-            <G key={`four-stats-${i}`}>
-              {/* Whisker: low → Q1 */}
-              <Line
-                x1={xMid}
-                y1={lowY}
-                x2={xMid}
-                y2={q1Y}
-                stroke="#0891b2"
-                strokeWidth="1"
-              />
-              {/* Whisker: Q3 → high */}
-              <Line
-                x1={xMid}
-                y1={q3Y}
-                x2={xMid}
-                y2={highY}
-                stroke="#0891b2"
-                strokeWidth="1"
-              />
-              {/* Low cap */}
-              <Line
-                x1={bx1 + boxInset}
-                y1={lowY}
-                x2={bx2 - boxInset}
-                y2={lowY}
-                stroke="#0891b2"
-                strokeWidth="1.5"
-              />
-              {/* High cap */}
-              <Line
-                x1={bx1 + boxInset}
-                y1={highY}
-                x2={bx2 - boxInset}
-                y2={highY}
-                stroke="#0891b2"
-                strokeWidth="1.5"
-              />
-              {/* Box Q1 → Q3 */}
-              <Rect
-                x={bx1}
-                y={q3Y}
-                width={bx2 - bx1}
-                height={q1Y - q3Y}
-                fill="rgba(8,145,178,0.12)"
-                stroke="#0891b2"
-                strokeWidth="1.5"
-              />
-              {/* Median line inside box */}
-              <Line
-                x1={bx1}
-                y1={medY}
-                x2={bx2}
-                y2={medY}
-                stroke="#0891b2"
-                strokeWidth="2.5"
-              />
-            </G>
-          );
-        })}
-      </G>
-    );
-  };
-
-  // ── SVG layer: selected-point projection lines ────────────────
-  const renderSelectedPointOverlay = () => {
-    if (selectedPoint == null || !data[selectedPoint]) return null;
-    const pt = data[selectedPoint];
-    const cx = xScale(pt.x);
-    const cy = yScale(pt.y);
+    const innerBox = withQuartiles && s.q1 != null && s.q3 != null;
+    const q1Y = innerBox ? yScale(s.q1) : null;
+    const q3Y = innerBox ? yScale(s.q3) : null;
 
     return (
-      <G>
-        {/* Vertical projection to X-axis */}
-        <Line
-          x1={cx}
-          y1={cy}
-          x2={cx}
-          y2={PLOT_BOTTOM}
-          stroke="#f59e0b"
-          strokeWidth="1.5"
-          strokeDasharray="4,3"
-        />
-        {/* Horizontal projection to Y-axis */}
-        <Line
-          x1={cx}
-          y1={cy}
-          x2={PLOT_LEFT}
-          y2={cy}
-          stroke="#f59e0b"
-          strokeWidth="1.5"
-          strokeDasharray="4,3"
-        />
-        {/* X-axis value highlight */}
+      <G key={key}>
+        {/* Outer filled box: low → high */}
         <Rect
-          x={cx - 20}
-          y={PLOT_BOTTOM + 2}
-          width="40"
-          height="18"
-          rx="3"
-          fill="#f59e0b"
+          x={bx1}
+          y={highY}
+          width={bx2 - bx1}
+          height={lowY - highY}
+          fill={fillColor}
+          stroke={color}
+          strokeWidth="1.5"
+          rx="2"
         />
-        <SvgText
-          x={cx}
-          y={PLOT_BOTTOM + 15}
-          fontSize="10"
-          fontWeight="bold"
-          textAnchor="middle"
-          fill="#fff"
-        >
-          {Math.round(pt.x * 10) / 10}
-        </SvgText>
-        {/* Y-axis value highlight */}
-        <Rect
-          x={PLOT_LEFT - 50}
-          y={cy - 9}
-          width="46"
-          height="18"
-          rx="3"
-          fill="#f59e0b"
-        />
-        <SvgText
-          x={PLOT_LEFT - 27}
-          y={cy + 4}
-          fontSize="10"
-          fontWeight="bold"
-          textAnchor="middle"
-          fill="#fff"
-        >
-          {Math.round(pt.y * 10) / 10}
-        </SvgText>
-        {/* Highlight ring */}
-        <Circle
-          cx={cx}
-          cy={cy}
-          r="7"
-          fill="none"
-          stroke="#f59e0b"
+        {/* Inner Q1→Q3 box, only in 4-group mode */}
+        {innerBox && (
+          <Rect
+            x={bx1}
+            y={q3Y}
+            width={bx2 - bx1}
+            height={q1Y - q3Y}
+            fill={color}
+            fillOpacity={0.18}
+            stroke={color}
+            strokeWidth="1.5"
+            rx="2"
+          />
+        )}
+        {/* Median */}
+        <Line
+          x1={bx1}
+          y1={medY}
+          x2={bx2}
+          y2={medY}
+          stroke={color}
           strokeWidth="2.5"
         />
       </G>
     );
   };
 
-  // ── Main render ───────────────────────────────────────────────
-  const svgContent = (
-    <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
-      {/* Background grid lines & Y-axis ticks */}
-      {yTickValues.map((tickValue, i) => {
-        const y = yScale(tickValue);
-        return (
-          <G key={`y-tick-${i}`}>
-            <Line
-              x1={Y_AXIS_WIDTH}
-              y1={y}
-              x2={CHART_WIDTH}
-              y2={y}
-              stroke="#e0e0e0"
-              strokeWidth="1"
-            />
-            <SvgText
-              x={Y_AXIS_WIDTH - 10}
-              y={y + 4}
-              fontSize="11"
-              textAnchor="end"
-              fill="#666"
-            >
-              {Math.round(tickValue)}
-            </SvgText>
-          </G>
-        );
-      })}
-
-      {/* X-axis ticks */}
-      {xTickValues.map((tickValue, i) => {
-        const x = xScale(tickValue);
-        return (
-          <G key={`x-tick-${i}`}>
-            <Line
-              x1={x}
-              y1={PADDING}
-              x2={x}
-              y2={CHART_HEIGHT - X_AXIS_HEIGHT}
-              stroke="#e0e0e0"
-              strokeWidth="1"
-            />
-            <SvgText
-              x={x}
-              y={CHART_HEIGHT - X_AXIS_HEIGHT + 20}
-              fontSize="11"
-              textAnchor="middle"
-              fill="#666"
-            >
-              {Math.round(tickValue)}
-            </SvgText>
-          </G>
-        );
-      })}
-
-      {/* Axes */}
+  const renderSliceBoundary = (key, s, i, color) =>
+    i === 0 ? null : (
       <Line
-        x1={Y_AXIS_WIDTH}
-        y1={PADDING}
-        x2={Y_AXIS_WIDTH}
-        y2={CHART_HEIGHT - X_AXIS_HEIGHT}
-        stroke="#333"
-        strokeWidth="2"
+        key={key}
+        x1={xScale(s.xLo)}
+        y1={PLOT_TOP}
+        x2={xScale(s.xLo)}
+        y2={PLOT_BOTTOM}
+        stroke={color}
+        strokeWidth="1"
+        strokeDasharray="4,3"
       />
-      <Line
-        x1={Y_AXIS_WIDTH}
-        y1={CHART_HEIGHT - X_AXIS_HEIGHT}
-        x2={CHART_WIDTH}
-        y2={CHART_HEIGHT - X_AXIS_HEIGHT}
-        stroke="#333"
-        strokeWidth="2"
-      />
-
-      {/* Overlays (behind dots so taps register) */}
-      {renderGridOverlay()}
-      {renderTwoGroupsOverlay()}
-      {renderFourGroupsOverlay()}
-      {renderCrossOverlay()}
-
-      {/* Data points */}
-      {data.map((point, index) => {
-        const cx = xScale(point.x);
-        const cy = yScale(point.y);
-        return (
-          <Circle
-            key={`point-${index}`}
-            cx={cx}
-            cy={cy}
-            r={selectedPoint === index ? 6 : 4}
-            fill={selectedPoint === index ? "#f59e0b" : "#2563eb"}
-            opacity={hideData ? 0 : 0.7}
-            onPress={() => handlePointTap(index)}
-          />
-        );
-      })}
-
-      {/* Projection lines for selected point (on top of everything) */}
-      {renderSelectedPointOverlay()}
-
-      {/* Axis labels */}
-      <SvgText
-        x={12}
-        y={(PLOT_TOP + PLOT_BOTTOM) / 2}
-        fontSize="13"
-        textAnchor="middle"
-        fill="#333"
-        transform={`rotate(-90 12 ${(PLOT_TOP + PLOT_BOTTOM) / 2})`}
-      >
-        Y Variable
-      </SvgText>
-      <SvgText
-        x={(PLOT_LEFT + PLOT_RIGHT) / 2}
-        y={CHART_HEIGHT - 6}
-        fontSize="13"
-        textAnchor="middle"
-        fill="#333"
-      >
-        X Variable
-      </SvgText>
-    </Svg>
-  );
-
-  // Wrap in GestureDetector only when cross is active (for dragging)
-  if (showCross) {
-    return (
-      <View
-        style={{
-          backgroundColor: "#fff",
-          justifyContent: "center",
-          alignItems: "center",
-          marginVertical: 10,
-        }}
-      >
-        <GestureDetector gesture={panGesture}>
-          <View>{svgContent}</View>
-        </GestureDetector>
-      </View>
     );
-  }
 
+  // ── SVG layer: two-group slicing ──────────────────────────────
+  const renderTwoGroupsOverlay = () => {
+    if (!twoGroupSlices) return null;
+    const color = "#0891b2";
+    const fillColor = "rgba(8,145,178,0.18)";
+    return (
+      <G>
+        {twoGroupSlices.map((s, i) =>
+          renderSliceBoundary(`two-boundary-${i}`, s, i, color),
+        )}
+        {twoGroupSlices.map((s, i) =>
+          renderBoxSlice(`two-box-${i}`, s, color, fillColor, false),
+        )}
+      </G>
+    );
+  };
+
+  // ── SVG layer: four-group slicing ─────────────────────────────
+  const renderFourGroupsOverlay = () => {
+    if (!fourGroupSlices) return null;
+    const color = "#0891b2";
+    const fillColor = "rgba(8,145,178,0.12)";
+    return (
+      <G>
+        {fourGroupSlices.map((s, i) =>
+          renderSliceBoundary(`four-boundary-${i}`, s, i, color),
+        )}
+        {fourGroupSlices.map((s, i) =>
+          renderBoxSlice(`four-box-${i}`, s, color, fillColor, true),
+        )}
+      </G>
+    );
+  };
+
+  // ── SVG layer: selected-point projection lines ────────────────
+  // Lines go from the dot down to the X-axis and left to the Y-axis.
+  // Small triangles sit on the axes where the lines meet them.
+  const TRIANGLE_SIZE = 6;
+  const renderSelectedPointOverlay = () => {
+    if (selectedPoints.length === 0) return null;
+    return (
+      <G>
+        {selectedPoints.map((idx) => {
+          const pt = data[idx];
+          if (!pt) return null;
+          const cx = xScale(pt.x);
+          const cy = yScale(pt.y);
+          return (
+            <G key={`sel-${idx}`}>
+              {/* Vertical line: dot → X-axis. Extend to the actual axis
+                  line (CHART_HEIGHT - X_AXIS_HEIGHT), not just PLOT_BOTTOM
+                  which stops PADDING pixels short of the axis. */}
+              <Line
+                x1={cx}
+                y1={cy}
+                x2={cx}
+                y2={CHART_HEIGHT - X_AXIS_HEIGHT}
+                stroke="#f59e0b"
+                strokeWidth="1"
+                strokeDasharray="3,3"
+              />
+              {/* Horizontal line: dot → Y-axis. Extend to Y_AXIS_WIDTH, the
+                  actual axis x-coordinate, not PLOT_LEFT which is PADDING
+                  pixels to the right of the axis. */}
+              <Line
+                x1={cx}
+                y1={cy}
+                x2={Y_AXIS_WIDTH}
+                y2={cy}
+                stroke="#f59e0b"
+                strokeWidth="1"
+                strokeDasharray="3,3"
+              />
+              {/* Triangle on X-axis: sits below the axis (outside the plot),
+                  tip pointing up and touching the axis — like a ▲ marker */}
+              <Polygon
+                points={`${cx - TRIANGLE_SIZE},${CHART_HEIGHT - X_AXIS_HEIGHT + TRIANGLE_SIZE} ${cx + TRIANGLE_SIZE},${CHART_HEIGHT - X_AXIS_HEIGHT + TRIANGLE_SIZE} ${cx},${CHART_HEIGHT - X_AXIS_HEIGHT}`}
+                fill="#f59e0b"
+              />
+              {/* Triangle on Y-axis: sits to the left of the axis (outside the
+                  plot), tip pointing right and touching the axis — ▶ marker */}
+              <Polygon
+                points={`${Y_AXIS_WIDTH - TRIANGLE_SIZE},${cy - TRIANGLE_SIZE} ${Y_AXIS_WIDTH - TRIANGLE_SIZE},${cy + TRIANGLE_SIZE} ${Y_AXIS_WIDTH},${cy}`}
+                fill="#f59e0b"
+              />
+              {/* Visible selection ring */}
+              <Circle
+                cx={cx}
+                cy={cy}
+                r="6"
+                fill="none"
+                stroke="#f59e0b"
+                strokeWidth="1.5"
+              />
+            </G>
+          );
+        })}
+      </G>
+    );
+  };
+
+  // ── Main render ───────────────────────────────────────────────
   return (
     <View
       style={{
@@ -693,7 +482,168 @@ const ScatterPlot = ({
         marginVertical: 10,
       }}
     >
-      {svgContent}
+      {/* Inner wrapper is exactly the SVG size so `position: "absolute"`
+          on the cross-handle overlay uses the same coordinate origin as
+          the SVG — fixes the handle being offset to the left when the
+          outer View is wider than CHART_WIDTH and centers the SVG. */}
+      <View
+        style={{
+          position: "relative",
+          width: CHART_WIDTH,
+          height: CHART_HEIGHT,
+        }}
+      >
+        <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
+          {/* Background grid lines & Y-axis ticks */}
+          {yTickValues.map((tickValue, i) => {
+            const y = yScale(tickValue);
+            return (
+              <G key={`y-tick-${i}`}>
+                <Line
+                  x1={Y_AXIS_WIDTH}
+                  y1={y}
+                  x2={CHART_WIDTH}
+                  y2={y}
+                  stroke="#e0e0e0"
+                  strokeWidth="1"
+                />
+                <SvgText
+                  x={Y_AXIS_WIDTH - 10}
+                  y={y + 4}
+                  fontSize="11"
+                  textAnchor="end"
+                  fill="#666"
+                >
+                  {Math.round(tickValue)}
+                </SvgText>
+              </G>
+            );
+          })}
+
+          {/* X-axis ticks */}
+          {xTickValues.map((tickValue, i) => {
+            const x = xScale(tickValue);
+            return (
+              <G key={`x-tick-${i}`}>
+                <Line
+                  x1={x}
+                  y1={PADDING}
+                  x2={x}
+                  y2={CHART_HEIGHT - X_AXIS_HEIGHT}
+                  stroke="#e0e0e0"
+                  strokeWidth="1"
+                />
+                <SvgText
+                  x={x}
+                  y={CHART_HEIGHT - X_AXIS_HEIGHT + 20}
+                  fontSize="11"
+                  textAnchor="middle"
+                  fill="#666"
+                >
+                  {Math.round(tickValue)}
+                </SvgText>
+              </G>
+            );
+          })}
+
+          {/* Axes */}
+          <Line
+            x1={Y_AXIS_WIDTH}
+            y1={PADDING}
+            x2={Y_AXIS_WIDTH}
+            y2={CHART_HEIGHT - X_AXIS_HEIGHT}
+            stroke="#333"
+            strokeWidth="2"
+          />
+          <Line
+            x1={Y_AXIS_WIDTH}
+            y1={CHART_HEIGHT - X_AXIS_HEIGHT}
+            x2={CHART_WIDTH}
+            y2={CHART_HEIGHT - X_AXIS_HEIGHT}
+            stroke="#333"
+            strokeWidth="2"
+          />
+
+          {/* Overlays (behind dots so taps register) */}
+          {renderGridOverlay()}
+          {renderTwoGroupsOverlay()}
+          {renderFourGroupsOverlay()}
+          {renderCrossOverlay()}
+
+          {/* Data points — selected dots get a larger invisible hit circle
+            so they're easy to tap again for deselection on touch devices. */}
+          {data.map((point, index) => {
+            const cx = xScale(point.x);
+            const cy = yScale(point.y);
+            const isSelected = selectedSet.has(index);
+            return (
+              <G key={`point-${index}`}>
+                {/* Invisible expanded hit area (always present, bigger for
+                  selected dots to make deselection comfortable) */}
+                <Circle
+                  cx={cx}
+                  cy={cy}
+                  r={isSelected ? 20 : 12}
+                  fill="transparent"
+                  onPress={() => handlePointTap(index)}
+                />
+                {/* Visible dot */}
+                <Circle
+                  cx={cx}
+                  cy={cy}
+                  r={isSelected ? 6 : 4}
+                  fill={isSelected ? "#f59e0b" : "#2563eb"}
+                  opacity={hideData ? 0 : 0.7}
+                  onPress={() => handlePointTap(index)}
+                />
+              </G>
+            );
+          })}
+
+          {/* Projection lines for selected points (on top of everything) */}
+          {renderSelectedPointOverlay()}
+
+          {/* Axis labels */}
+          <SvgText
+            x={12}
+            y={(PLOT_TOP + PLOT_BOTTOM) / 2}
+            fontSize="13"
+            textAnchor="middle"
+            fill="#333"
+            transform={`rotate(-90 12 ${(PLOT_TOP + PLOT_BOTTOM) / 2})`}
+          >
+            Y Variable
+          </SvgText>
+          <SvgText
+            x={(PLOT_LEFT + PLOT_RIGHT) / 2}
+            y={CHART_HEIGHT - 6}
+            fontSize="13"
+            textAnchor="middle"
+            fill="#333"
+          >
+            X Variable
+          </SvgText>
+        </Svg>
+
+        {/* Drag-handle overlay: only the small square at the cross center is
+          draggable, so panning anywhere else on the chart no longer steals
+          taps from data points (fixes inability to deselect on Android). */}
+        {showCross && crossPixelCenter && (
+          <GestureDetector gesture={panGesture}>
+            <View
+              style={{
+                position: "absolute",
+                left: crossPixelCenter.cx - CROSS_HIT_SIZE / 2,
+                top: crossPixelCenter.cy - CROSS_HIT_SIZE / 2,
+                width: CROSS_HIT_SIZE,
+                height: CROSS_HIT_SIZE,
+                // Transparent — purely a hit target.
+                backgroundColor: "transparent",
+              }}
+            />
+          </GestureDetector>
+        )}
+      </View>
     </View>
   );
 };
