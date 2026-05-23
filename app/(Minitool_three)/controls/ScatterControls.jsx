@@ -12,6 +12,7 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import InfoModal from "../modals/InfoModal";
+import Dropdown from "../../../components/dropDown";
 
 const ScatterControls = ({
   isMobile = false,
@@ -25,6 +26,7 @@ const ScatterControls = ({
   onTwoGroupsChange,
   fourGroupsCount,
   onFourGroupsChange,
+  scrollRef,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalContent, setModalContent] = useState({ title: "", message: "" });
@@ -85,7 +87,7 @@ const ScatterControls = ({
     };
 
     return (
-      <View style={styles.dropdownRow}>
+      <View style={[styles.dropdownRow, isMobile && styles.dropdownRowMobile]}>
         {/* 1. Info Icon */}
         <TouchableOpacity
           style={styles.infoCircle}
@@ -96,7 +98,7 @@ const ScatterControls = ({
           <Text style={styles.infoText}>i</Text>
         </TouchableOpacity>
 
-        <View style={styles.dropdownWrapper} ref={buttonRef}>
+        {/* <View style={styles.dropdownWrapper} ref={buttonRef}>
           <TouchableOpacity
             style={styles.dropdownHeader}
             activeOpacity={0.8}
@@ -104,106 +106,87 @@ const ScatterControls = ({
           >
             <Text style={styles.headerText}>{headerLabel} ▼</Text>
           </TouchableOpacity>
+        </View> */}
+        <View style={styles.dropdownWrapper}>
+          <Dropdown
+            data={options}
+            onChange={onSelect}
+            placeholder={headerLabel}
+            scrollRef={scrollRef}
+          />
         </View>
-
-        {/* 3. The Modal Dropdown List */}
-        <Modal visible={expanded} transparent animationType="none">
-          <TouchableWithoutFeedback onPress={() => setExpanded(false)}>
-            <View style={styles.modalOverlay}>
-              <View
-                style={[
-                  styles.modalOptions,
-                  {
-                    top: dropdownTop,
-                    left: dropdownLeft,
-                    width: dropdownWidth,
-                  },
-                ]}
-              >
-                <FlatList
-                  data={options}
-                  keyExtractor={(item) => String(item.value)}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={styles.optionItem}
-                      onPress={() => {
-                        onSelect(item.value);
-                        setExpanded(false);
-                      }}
-                    >
-                      <Text style={styles.itemText}>{item.label}</Text>
-                    </TouchableOpacity>
-                  )}
-                />
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
       </View>
     );
   };
 
   return (
-    <View style={styles.scrollContent}>
+    <View
+      style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}
+    >
+      {/* Left Column: Switches */}
       <View
-        style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}
+        style={[styles.switchColumn, isMobile && styles.switchColumnMobile]}
       >
-        {/* Left Column: Switches */}
-        <View
-          style={[styles.switchColumn, isMobile && styles.switchColumnMobile]}
-        >
-          <View style={styles.switchGroup}>
-            <Text style={styles.label}>Show Cross</Text>
-            <Switch value={showCross} onValueChange={onShowCrossChange} />
-          </View>
-
-          <View style={styles.switchGroup}>
-            <Text style={styles.label}>Hide Data</Text>
-            <Switch value={hideData} onValueChange={onHideDataChange} />
-          </View>
-        </View>
-
-        {/* Right Column: Dropdowns */}
-        <View
-          style={[
-            styles.dropdownColumn,
-            isMobile && styles.dropdownColumnMobile,
-          ]}
-        >
-          <DropdownItem
-            label="Two Groups"
-            infoTitle="Two Equal Groups"
-            infoBody="Divides plot into groups + shows median, low, and high values."
-            options={groupOptions}
-            value={twoGroupsCount}
-            onSelect={onTwoGroupsChange}
-          />
-          <DropdownItem
-            label="Four Groups"
-            infoTitle="Four Equal Groups"
-            infoBody="Divides plot into groups + shows median, low, high, and quartiles."
-            options={groupOptions}
-            value={fourGroupsCount}
-            onSelect={onFourGroupsChange}
-          />
-          <DropdownItem
-            label="Grids"
-            infoTitle="Grids Mode"
-            infoBody="Divides plot into grid groups with full statistical markers."
-            options={gridOptions}
-            value={activeGrid}
-            onSelect={onActiveGridChange}
+        <View style={styles.switchGroup}>
+          <Text style={[styles.label, isMobile && styles.labelMobile]}>
+            Show Cross
+          </Text>
+          <Switch
+            value={showCross}
+            onValueChange={onShowCrossChange}
+            style={[!isMobile && { transform: [{ scale: 1.2 }] }]}
           />
         </View>
 
-        {/* 3. THE MODAL (Placed at the bottom of JSX) */}
-        <InfoModal
-          visible={modalVisible}
-          title={modalContent.title}
-          message={modalContent.message}
-          onClose={() => setModalVisible(false)}
+        <View style={styles.switchGroup}>
+          <Text style={[styles.label, isMobile && styles.labelMobile]}>
+            Hide Data
+          </Text>
+          <Switch
+            value={hideData}
+            onValueChange={onHideDataChange}
+            style={[!isMobile && { transform: [{ scale: 1.2 }] }]}
+          />
+        </View>
+      </View>
+
+      {/* Right Column: Dropdowns */}
+      <View
+        style={[styles.dropdownColumn, isMobile && styles.dropdownColumnMobile]}
+      >
+        <DropdownItem
+          label="Two Groups"
+          infoTitle="Two Equal Groups"
+          infoBody="Divides plot into groups + shows median, low, and high values."
+          options={groupOptions}
+          value={twoGroupsCount}
+          onSelect={onTwoGroupsChange}
+        />
+        <DropdownItem
+          label="Four Groups"
+          infoTitle="Four Equal Groups"
+          infoBody="Divides plot into groups + shows median, low, high, and quartiles."
+          options={groupOptions}
+          value={fourGroupsCount}
+          onSelect={onFourGroupsChange}
+        />
+        <DropdownItem
+          label="Grids"
+          infoTitle="Grids Mode"
+          infoBody="Divides plot into grid groups with full statistical markers."
+          options={gridOptions}
+          value={activeGrid}
+          onSelect={onActiveGridChange}
         />
       </View>
+
+      {/* 3. THE MODAL (Placed at the bottom of JSX) */}
+      <InfoModal
+        visible={modalVisible}
+        title={modalContent.title}
+        message={modalContent.message}
+        onClose={() => setModalVisible(false)}
+      />
     </View>
   );
 };
@@ -213,26 +196,30 @@ const styles = StyleSheet.create({
   },
   mainContainer: {
     flexDirection: "row", // Side-by-side layout
-    width: "100%",
-    padding: 15,
-    backgroundColor: "#fff",
+    //width: "100%",
+    marginHorizontal: 62,
+    backgroundColor: "#e6f4f1",
+    borderWidth: 2,
+    borderColor: "#00405b",
+    borderRadius: 20,
     alignItems: "flex-start",
     zIndex: 1,
     overflow: "visible",
   },
   mainContainerMobile: {
+    marginHorizontal: 10,
     minHeight: 400,
     flexDirection: "column",
-    alignItems: "stretch",
-    padding: 10,
+    //alignItems: "stretch",
+    paddingHorizontal: 10,
   },
   /* --- Left Column (desktop) / Switches row (mobile) --- */
   switchColumn: {
     flex: 1,
     justifyContent: "space-around",
-    borderRightWidth: 1,
-    borderRightColor: "#eee",
-    paddingRight: 10,
+    alignItems: "center",
+    paddingHorizontal: 25,
+    paddingVertical: 63,
   },
   switchColumnMobile: {
     width: "100%",
@@ -241,49 +228,69 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     alignItems: "center",
     borderRightWidth: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    paddingRight: 0,
-    paddingBottom: 10,
-    marginBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: "#00405b",
+    paddingTop: 5,
+    paddingBottom: 0,
   },
   switchGroup: {
     alignItems: "center",
     marginBottom: 10,
   },
   label: {
-    fontSize: 12,
-    color: "#666",
+    fontSize: 18,
+    color: "#002e48",
     marginBottom: 5,
     fontWeight: "600",
   },
+  labelMobile: {
+    fontSize: 12,
+  },
   /* --- Right Column (desktop) / Dropdowns column (mobile) --- */
   dropdownColumn: {
-    flex: 1.5,
-    paddingLeft: 15,
+    flex: 2,
+    paddingTop: 20,
+    paddingBottom: 0,
+    paddingVertical: 20,
     justifyContent: "space-around",
     overflow: "visible",
+    borderLeftWidth: 2,
+    borderLeftColor: "#00405b",
   },
   dropdownColumnMobile: {
+    justifyContent: "space-evenly",
     width: "100%",
     //flex: undefined,
     flexDirection: "column",
-    paddingLeft: 0,
+    paddingVertical: 5,
+    borderLeftWidth: 0,
   },
   dropdownRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 15,
+    paddingHorizontal: 62,
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  dropdownRowMobile: {
+    marginBottom: 0,
+    paddingTop: 0,
+    paddingHorizontal: 0,
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   infoCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 35,
+    height: 35,
+    borderRadius: 20,
     borderWidth: 1,
+    backgroundColor: "#e0f2fe",
     borderColor: "#2563eb",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
+    marginHorizontal: 20,
+    marginBottom: 10,
   },
   infoText: {
     color: "#2563eb",

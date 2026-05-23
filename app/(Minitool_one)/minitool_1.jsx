@@ -966,10 +966,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#e5e7eb",
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
     alignItems: "center",
-    paddingBottom: 20,
+    paddingVertical: 15,
   },
   title: {
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: "bold",
     marginVertical: 10,
   },

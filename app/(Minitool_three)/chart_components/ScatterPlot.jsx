@@ -1,6 +1,13 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
-import Svg, { Circle, Line, Text as SvgText, G, Rect, Polygon } from "react-native-svg";
+import Svg, {
+  Circle,
+  Line,
+  Text as SvgText,
+  G,
+  Rect,
+  Polygon,
+} from "react-native-svg";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import { scaleLinear } from "d3-scale";
 import useStatistics from "./useStatistics";
@@ -21,18 +28,19 @@ const ScatterPlot = ({
   selectedPoints = [],
   onPointToggle,
   onScrollEnabled,
+  isMobile = false,
 }) => {
   const { width: windowWidth } = useDimensions();
   const containerWidth = widthProp ?? windowWidth;
 
   // ── Chart geometry constants ──────────────────────────────
   const isCompact = containerWidth < 600;
-  const CHART_WIDTH = Math.max(280, containerWidth - (isCompact ? 20 : 40));
-  const CHART_HEIGHT = heightProp ?? (isCompact ? 320 : 500);
-  const PADDING = isCompact ? 24 : 40;
+  const CHART_WIDTH = Math.max(300, containerWidth - (isCompact ? 20 : 40));
+  const CHART_HEIGHT = isMobile ? CHART_WIDTH * 1.3 : CHART_WIDTH * 0.75; // 4:3 aspect ratio, good for data distribution and mobile screens.
+  const PADDING = isCompact ? 12 : 40;
   const Y_AXIS_LABEL_WIDTH = isCompact ? 18 : 22;
   const X_AXIS_LABEL_HEIGHT = isCompact ? 18 : 22;
-  const Y_AXIS_WIDTH = (isCompact ? 40 : 50) + Y_AXIS_LABEL_WIDTH;
+  const Y_AXIS_WIDTH = (isCompact ? 32 : 50) + Y_AXIS_LABEL_WIDTH;
   const X_AXIS_HEIGHT = (isCompact ? 32 : 40) + X_AXIS_LABEL_HEIGHT;
   const PLOT_LEFT = Y_AXIS_WIDTH + PADDING;
   const PLOT_RIGHT = CHART_WIDTH - PADDING;
@@ -478,157 +486,163 @@ const ScatterPlot = ({
           on the cross-handle overlay uses the same coordinate origin as
           the SVG — fixes the handle being offset to the left when the
           outer View is wider than CHART_WIDTH and centers the SVG. */}
-      <View style={{ position: "relative", width: CHART_WIDTH, height: CHART_HEIGHT }}>
-      <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
-        {/* Background grid lines & Y-axis ticks */}
-        {yTickValues.map((tickValue, i) => {
-          const y = yScale(tickValue);
-          return (
-            <G key={`y-tick-${i}`}>
-              <Line
-                x1={Y_AXIS_WIDTH}
-                y1={y}
-                x2={CHART_WIDTH}
-                y2={y}
-                stroke="#e0e0e0"
-                strokeWidth="1"
-              />
-              <SvgText
-                x={Y_AXIS_WIDTH - 10}
-                y={y + 4}
-                fontSize="11"
-                textAnchor="end"
-                fill="#666"
-              >
-                {Math.round(tickValue)}
-              </SvgText>
-            </G>
-          );
-        })}
+      <View
+        style={{
+          position: "relative",
+          width: CHART_WIDTH,
+          height: CHART_HEIGHT,
+        }}
+      >
+        <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
+          {/* Background grid lines & Y-axis ticks */}
+          {yTickValues.map((tickValue, i) => {
+            const y = yScale(tickValue);
+            return (
+              <G key={`y-tick-${i}`}>
+                <Line
+                  x1={Y_AXIS_WIDTH}
+                  y1={y}
+                  x2={CHART_WIDTH}
+                  y2={y}
+                  stroke="#e0e0e0"
+                  strokeWidth="1"
+                />
+                <SvgText
+                  x={Y_AXIS_WIDTH - 10}
+                  y={y + 4}
+                  fontSize="11"
+                  textAnchor="end"
+                  fill="#666"
+                >
+                  {Math.round(tickValue)}
+                </SvgText>
+              </G>
+            );
+          })}
 
-        {/* X-axis ticks */}
-        {xTickValues.map((tickValue, i) => {
-          const x = xScale(tickValue);
-          return (
-            <G key={`x-tick-${i}`}>
-              <Line
-                x1={x}
-                y1={PADDING}
-                x2={x}
-                y2={CHART_HEIGHT - X_AXIS_HEIGHT}
-                stroke="#e0e0e0"
-                strokeWidth="1"
-              />
-              <SvgText
-                x={x}
-                y={CHART_HEIGHT - X_AXIS_HEIGHT + 20}
-                fontSize="11"
-                textAnchor="middle"
-                fill="#666"
-              >
-                {Math.round(tickValue)}
-              </SvgText>
-            </G>
-          );
-        })}
+          {/* X-axis ticks */}
+          {xTickValues.map((tickValue, i) => {
+            const x = xScale(tickValue);
+            return (
+              <G key={`x-tick-${i}`}>
+                <Line
+                  x1={x}
+                  y1={PADDING}
+                  x2={x}
+                  y2={CHART_HEIGHT - X_AXIS_HEIGHT}
+                  stroke="#e0e0e0"
+                  strokeWidth="1"
+                />
+                <SvgText
+                  x={x}
+                  y={CHART_HEIGHT - X_AXIS_HEIGHT + 20}
+                  fontSize="11"
+                  textAnchor="middle"
+                  fill="#666"
+                >
+                  {Math.round(tickValue)}
+                </SvgText>
+              </G>
+            );
+          })}
 
-        {/* Axes */}
-        <Line
-          x1={Y_AXIS_WIDTH}
-          y1={PADDING}
-          x2={Y_AXIS_WIDTH}
-          y2={CHART_HEIGHT - X_AXIS_HEIGHT}
-          stroke="#333"
-          strokeWidth="2"
-        />
-        <Line
-          x1={Y_AXIS_WIDTH}
-          y1={CHART_HEIGHT - X_AXIS_HEIGHT}
-          x2={CHART_WIDTH}
-          y2={CHART_HEIGHT - X_AXIS_HEIGHT}
-          stroke="#333"
-          strokeWidth="2"
-        />
+          {/* Axes */}
+          <Line
+            x1={Y_AXIS_WIDTH}
+            y1={PADDING}
+            x2={Y_AXIS_WIDTH}
+            y2={CHART_HEIGHT - X_AXIS_HEIGHT}
+            stroke="#333"
+            strokeWidth="2"
+          />
+          <Line
+            x1={Y_AXIS_WIDTH}
+            y1={CHART_HEIGHT - X_AXIS_HEIGHT}
+            x2={CHART_WIDTH}
+            y2={CHART_HEIGHT - X_AXIS_HEIGHT}
+            stroke="#333"
+            strokeWidth="2"
+          />
 
-        {/* Overlays (behind dots so taps register) */}
-        {renderGridOverlay()}
-        {renderTwoGroupsOverlay()}
-        {renderFourGroupsOverlay()}
-        {renderCrossOverlay()}
+          {/* Overlays (behind dots so taps register) */}
+          {renderGridOverlay()}
+          {renderTwoGroupsOverlay()}
+          {renderFourGroupsOverlay()}
+          {renderCrossOverlay()}
 
-        {/* Data points — selected dots get a larger invisible hit circle
+          {/* Data points — selected dots get a larger invisible hit circle
             so they're easy to tap again for deselection on touch devices. */}
-        {data.map((point, index) => {
-          const cx = xScale(point.x);
-          const cy = yScale(point.y);
-          const isSelected = selectedSet.has(index);
-          return (
-            <G key={`point-${index}`}>
-              {/* Invisible expanded hit area (always present, bigger for
+          {data.map((point, index) => {
+            const cx = xScale(point.x);
+            const cy = yScale(point.y);
+            const isSelected = selectedSet.has(index);
+            return (
+              <G key={`point-${index}`}>
+                {/* Invisible expanded hit area (always present, bigger for
                   selected dots to make deselection comfortable) */}
-              <Circle
-                cx={cx}
-                cy={cy}
-                r={isSelected ? 20 : 12}
-                fill="transparent"
-                onPress={() => handlePointTap(index)}
-              />
-              {/* Visible dot */}
-              <Circle
-                cx={cx}
-                cy={cy}
-                r={isSelected ? 6 : 4}
-                fill={isSelected ? "#f59e0b" : "#2563eb"}
-                opacity={hideData ? 0 : 0.7}
-                onPress={() => handlePointTap(index)}
-              />
-            </G>
-          );
-        })}
+                <Circle
+                  cx={cx}
+                  cy={cy}
+                  r={isSelected ? 20 : 12}
+                  fill="transparent"
+                  onPress={() => handlePointTap(index)}
+                />
+                {/* Visible dot */}
+                <Circle
+                  cx={cx}
+                  cy={cy}
+                  r={isSelected ? 6 : 4}
+                  fill={isSelected ? "#f59e0b" : "#2563eb"}
+                  opacity={hideData ? 0 : 0.7}
+                  onPress={() => handlePointTap(index)}
+                />
+              </G>
+            );
+          })}
 
-        {/* Projection lines for selected points (on top of everything) */}
-        {renderSelectedPointOverlay()}
+          {/* Projection lines for selected points (on top of everything) */}
+          {renderSelectedPointOverlay()}
 
-        {/* Axis labels */}
-        <SvgText
-          x={12}
-          y={(PLOT_TOP + PLOT_BOTTOM) / 2}
-          fontSize="13"
-          textAnchor="middle"
-          fill="#333"
-          transform={`rotate(-90 12 ${(PLOT_TOP + PLOT_BOTTOM) / 2})`}
-        >
-          Y Variable
-        </SvgText>
-        <SvgText
-          x={(PLOT_LEFT + PLOT_RIGHT) / 2}
-          y={CHART_HEIGHT - 6}
-          fontSize="13"
-          textAnchor="middle"
-          fill="#333"
-        >
-          X Variable
-        </SvgText>
-      </Svg>
+          {/* Axis labels */}
+          <SvgText
+            x={12}
+            y={(PLOT_TOP + PLOT_BOTTOM) / 2}
+            fontSize="13"
+            textAnchor="middle"
+            fill="#333"
+            transform={`rotate(-90 12 ${(PLOT_TOP + PLOT_BOTTOM) / 2})`}
+          >
+            Y Variable
+          </SvgText>
+          <SvgText
+            x={(PLOT_LEFT + PLOT_RIGHT) / 2}
+            y={CHART_HEIGHT - 6}
+            fontSize="13"
+            textAnchor="middle"
+            fill="#333"
+          >
+            X Variable
+          </SvgText>
+        </Svg>
 
-      {/* Drag-handle overlay: only the small square at the cross center is
+        {/* Drag-handle overlay: only the small square at the cross center is
           draggable, so panning anywhere else on the chart no longer steals
           taps from data points (fixes inability to deselect on Android). */}
-      {showCross && crossPixelCenter && (
-        <GestureDetector gesture={panGesture}>
-          <View
-            style={{
-              position: "absolute",
-              left: crossPixelCenter.cx - CROSS_HIT_SIZE / 2,
-              top: crossPixelCenter.cy - CROSS_HIT_SIZE / 2,
-              width: CROSS_HIT_SIZE,
-              height: CROSS_HIT_SIZE,
-              // Transparent — purely a hit target.
-              backgroundColor: "transparent",
-            }}
-          />
-        </GestureDetector>
-      )}
+        {showCross && crossPixelCenter && (
+          <GestureDetector gesture={panGesture}>
+            <View
+              style={{
+                position: "absolute",
+                left: crossPixelCenter.cx - CROSS_HIT_SIZE / 2,
+                top: crossPixelCenter.cy - CROSS_HIT_SIZE / 2,
+                width: CROSS_HIT_SIZE,
+                height: CROSS_HIT_SIZE,
+                // Transparent — purely a hit target.
+                backgroundColor: "transparent",
+              }}
+            />
+          </GestureDetector>
+        )}
       </View>
     </View>
   );

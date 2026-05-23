@@ -7,6 +7,8 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Platform,
+  ScrollView,
+  Dimensions,
 } from "react-native";
 import React, { useCallback, useRef, useState } from "react";
 import { AntDesign } from "@expo/vector-icons"; // Ensure expo/vector-icons is installed
@@ -21,6 +23,7 @@ interface DropDownProps {
   onChange: (value: string) => void;
   placeholder: string;
   label?: string; // Added label prop to match "Industry" text
+  scrollRef?: React.RefObject<ScrollView>;
 }
 
 export default function Dropdown({
@@ -28,6 +31,7 @@ export default function Dropdown({
   onChange,
   placeholder,
   label,
+  scrollRef,
 }: DropDownProps) {
   const [expanded, setExpanded] = useState(false);
   const [value, setValue] = useState("");
@@ -37,18 +41,35 @@ export default function Dropdown({
   const toggleExpanded = useCallback(() => {
     if (!expanded) {
       buttonRef.current?.measure((x, y, width, height, pageX, pageY) => {
+        // 1. Get the total height of the device screen
+        const windowHeight = Dimensions.get("window").height;
+        const dropdownMaxHeight = 200; // Matches your FlatList's maxHeight
+
+        // 2. Calculate how much space is left between the bottom of the button and the bottom of the screen
+        const spaceBelow = windowHeight - (pageY + height);
+
+        // 3. Decide whether to open UP or DOWN
+        let topPosition = pageY + height + 5; // Default: open downwards
+
+        // If space below is less than the dropdown height AND there's enough room above it, open UPwards instead
+        if (spaceBelow < dropdownMaxHeight && pageY > dropdownMaxHeight) {
+          topPosition = pageY - dropdownMaxHeight - 5;
+        }
+
         setCoords({
-          top: pageY + height + 5,
+          top: topPosition,
           left: pageX,
           width: width,
         });
         setExpanded(true);
+
+        // (Optional) You can safely remove the scrollRef?.current?.scrollTo logic here
+        // since the dropdown will now intelligently place itself where it fits!
       });
     } else {
       setExpanded(false);
     }
   }, [expanded]);
-
   const onSelect = useCallback(
     (item: OptionItem) => {
       onChange(item.value);
@@ -91,10 +112,12 @@ export default function Dropdown({
                     styles.options,
                     { top: coords.top, left: coords.left, width: coords.width },
                   ]}
+                  onStartShouldSetResponder={() => true}
                 >
                   <FlatList
                     keyExtractor={(item) => item.value}
                     data={data}
+                    style={{ maxHeight: 200 }}
                     renderItem={({ item }) => (
                       <TouchableOpacity
                         activeOpacity={0.7}
@@ -138,6 +161,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   button: {
+    width: "100%",
     height: 52,
     flexDirection: "row",
     justifyContent: "space-between",
