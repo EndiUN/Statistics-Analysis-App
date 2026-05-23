@@ -52,6 +52,15 @@ import {
   API_URL,
 } from "./constants";
 
+// --- Local Scenarios (always available) ---
+const LOCAL_SCENARIOS = [
+  {
+    id: "local_initial",
+    name: "Default Battery Data",
+    data: initialBatteryData,
+  },
+];
+
 const Minitool_1 = () => {
   const { width } = useDimensions();
   const router = useRouter();
@@ -381,12 +390,27 @@ const Minitool_1 = () => {
   const handleLoadScenarioFromDropdown = useCallback(
     async (scenarioId) => {
       if (!scenarioId) return;
+
+      // Check if it's a local scenario
+      if (scenarioId.startsWith("local_")) {
+        const localScenario = LOCAL_SCENARIOS.find((s) => s.id === scenarioId);
+        if (localScenario) {
+          setCurrentBatteryData(localScenario.data);
+          setLoadedScenarioName(localScenario.name);
+          setSelectedScenarioId(scenarioId);
+          chartControls.setIsSortedByColor(false);
+          chartControls.setIsSortedBySize(false);
+        }
+        return;
+      }
+
+      // Load from database
       try {
         const response = await axios.get(`${API_URL}/${scenarioId}`);
         if (response.data.success) {
           const scenarioData = response.data.data;
-          const dataPoints = scenarioData?.data?.dataPoints ?? [];
-          setCurrentBatteryData(dataPoints);
+          const bars = scenarioData?.data?.bars ?? [];
+          setCurrentBatteryData(bars);
           setLoadedScenarioName(scenarioData?.name ?? "Unnamed");
           setSelectedScenarioId(scenarioId);
           chartControls.setIsSortedByColor(false);
@@ -571,10 +595,16 @@ const Minitool_1 = () => {
             ]}
           >
             <Dropdown
-              data={scenarios.map((scenario) => ({
-                label: scenario.name,
-                value: scenario._id,
-              }))}
+              data={[
+                ...LOCAL_SCENARIOS.map((scenario) => ({
+                  label: scenario.name,
+                  value: scenario.id,
+                })),
+                ...scenarios.map((scenario) => ({
+                  label: scenario.name,
+                  value: scenario._id,
+                })),
+              ]}
               onChange={handleLoadScenarioFromDropdown}
               placeholder="Select scenario"
             />
