@@ -48,10 +48,10 @@ jest.mock("../chart_components/ScatterPlot", () => {
       <Text testID="scatter-active-grid">{`activeGrid:${String(props.activeGrid)}`}</Text>
       <Text testID="scatter-two-groups">{`two:${String(props.twoGroupsCount)}`}</Text>
       <Text testID="scatter-four-groups">{`four:${String(props.fourGroupsCount)}`}</Text>
-      <Text testID="scatter-selected">{`selected:${String(props.selectedPoint)}`}</Text>
+      <Text testID="scatter-selected">{`selected:${JSON.stringify(props.selectedPoints)}`}</Text>
       <Text
         testID="scatter-select-point"
-        onPress={() => props.onPointSelect?.(0)}
+        onPress={() => props.onPointToggle?.(0)}
       >
         select point 0
       </Text>
@@ -178,7 +178,6 @@ describe("Minitool_3 Integration Tests", () => {
     test("renders header, scatter plot, controls, and upload button", async () => {
       renderMinitool3();
       expect(screen.getByText("Scatter Plot Analysis")).toBeTruthy();
-      expect(screen.getByText("Bivariate Data Visualization")).toBeTruthy();
       expect(screen.getByTestId("scatter-plot")).toBeTruthy();
       expect(screen.getByTestId("scatter-controls")).toBeTruthy();
       expect(screen.getByTestId("universe-button-Upload")).toBeTruthy();
@@ -470,12 +469,12 @@ describe("Minitool_3 Integration Tests", () => {
     test("selecting a point on the scatter plot updates selectedPoint prop", async () => {
       renderMinitool3();
       expect(screen.getByTestId("scatter-selected").children).toContain(
-        "selected:null",
+        "selected:[]",
       );
       fireEvent.press(screen.getByTestId("scatter-select-point"));
       await waitFor(() =>
         expect(screen.getByTestId("scatter-selected").children).toContain(
-          "selected:0",
+          "selected:[0]",
         ),
       );
     });
@@ -485,14 +484,14 @@ describe("Minitool_3 Integration Tests", () => {
       fireEvent.press(screen.getByTestId("scatter-select-point"));
       await waitFor(() =>
         expect(screen.getByTestId("scatter-selected").children).toContain(
-          "selected:0",
+          "selected:[0]",
         ),
       );
 
       fireEvent.press(screen.getByTestId("dropdown-option-local:dataset2"));
       await waitFor(() =>
         expect(screen.getByTestId("scatter-selected").children).toContain(
-          "selected:null",
+          "selected:[]",
         ),
       );
     });

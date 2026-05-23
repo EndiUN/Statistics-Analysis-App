@@ -71,40 +71,40 @@ describe("ScatterPlot", () => {
     expect(circles.length).toBe(0);
   });
 
-  test("calls onPointSelect with the index when a point is tapped", () => {
-    const onPointSelect = jest.fn();
+  test("calls onPointToggle with the index when a point is tapped", () => {
+    const onPointToggle = jest.fn();
     const { UNSAFE_queryAllByType } = render(
       <ScatterPlot
         data={sampleData}
         width={800}
         height={500}
-        onPointSelect={onPointSelect}
+        onPointToggle={onPointToggle}
       />,
     );
     const circles = UNSAFE_queryAllByType(Circle);
     fireEvent.press(circles[0]);
-    expect(onPointSelect).toHaveBeenCalledWith(0);
+    expect(onPointToggle).toHaveBeenCalledWith(0);
   });
 
-  test("tapping the currently selected point deselects it (null)", () => {
-    const onPointSelect = jest.fn();
+  test("tapping a point forwards its index to onPointToggle", () => {
+    const onPointToggle = jest.fn();
     const { UNSAFE_queryAllByType } = render(
       <ScatterPlot
         data={sampleData}
         width={800}
         height={500}
-        selectedPoint={2}
-        onPointSelect={onPointSelect}
+        selectedPoints={[2]}
+        onPointToggle={onPointToggle}
       />,
     );
     const circles = UNSAFE_queryAllByType(Circle);
     // The selected point is the third data circle. Find it by checking which
-    // circle has the highlighted fill (#f59e0b) and a larger radius.
+    // circle has the highlighted fill (#f59e0b) or the unselected fill (#2563eb).
     const dataCircles = circles.filter(
       (c) => c.props.fill === "#2563eb" || c.props.fill === "#f59e0b",
     );
     fireEvent.press(dataCircles[2]);
-    expect(onPointSelect).toHaveBeenCalledWith(null);
+    expect(onPointToggle).toHaveBeenCalledWith(2);
   });
 
   test("hideData=true renders data circles with opacity 0", () => {
@@ -152,7 +152,7 @@ describe("ScatterPlot", () => {
         data={sampleData}
         width={800}
         height={500}
-        selectedPoint={1}
+        selectedPoints={[1]}
       />,
     );
     const highlighted = UNSAFE_queryAllByType(Circle).filter(

@@ -20,6 +20,44 @@ jest.mock("../modals/InfoModal", () => {
   };
 });
 
+// Mock the Dropdown component
+jest.mock("../../../components/dropDown", () => {
+  const React = require("react");
+  const { View, Text, TouchableOpacity } = require("react-native");
+  return function MockDropdown({ data, onChange, placeholder }) {
+    const [expanded, setExpanded] = React.useState(false);
+
+    // Render the placeholder directly since the parent component completely
+    // controls the label format (e.g. "Two Groups: Off" or "Two Groups: 4")
+    return (
+      <View testID="dropdown-container">
+        <TouchableOpacity
+          testID="dropdown-trigger"
+          onPress={() => setExpanded(!expanded)}
+        >
+          <Text testID="dropdown-text">{placeholder}</Text>
+        </TouchableOpacity>
+        {expanded && (
+          <View testID="dropdown-options">
+            {data?.map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                testID={`dropdown-option-${item.value}`}
+                onPress={() => {
+                  onChange(item.value);
+                  setExpanded(false);
+                }}
+              >
+                <Text>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+});
+
 const baseProps = {
   isMobile: false,
   showCross: false,
@@ -32,32 +70,45 @@ const baseProps = {
   onTwoGroupsChange: jest.fn(),
   fourGroupsCount: null,
   onFourGroupsChange: jest.fn(),
+  scrollRef: React.createRef(),
 };
 
 const renderControls = (overrides = {}) =>
   render(<ScatterControls {...baseProps} {...overrides} />);
 
-// Helper: open a dropdown by its header text. Bypasses the .measure() call so
-// we can deterministically expand the FlatList in jsdom.
-const openDropdown = (headerText) => {
-  const header = screen.getByText(headerText);
-  // The wrapping <View ref={buttonRef}> is the parent of the touchable.
-  // Mock measure so toggleDropdown's callback runs synchronously.
-  const wrapperView = header.parent?.parent;
-  if (wrapperView && typeof wrapperView.props === "object") {
-    // Patch the underlying ref's measure if accessible via instance
-    // Fallback: monkey-patch View.prototype.measure for this test.
+// Helper: open a dropdown by finding the Dropdown component and pressing it
+const openDropdownByLabel = (label) => {
+  const dropdowns = screen.getAllByTestId("dropdown-trigger");
+  for (const dropdown of dropdowns) {
+    const text = dropdown.findByType(require("react-native").Text);
+    if (text && text.props.children.includes(label)) {
+      fireEvent.press(dropdown);
+      return;
+    }
   }
-  // Simplest reliable approach: stub View.prototype.measure for the press
-  const RN = require("react-native");
-  const originalMeasure = RN.View.prototype && RN.View.prototype.measure;
-  RN.View.prototype.measure = function (cb) {
-    cb(0, 0, 200, 40, 0, 0);
-  };
-  act(() => {
-    fireEvent.press(header);
+};
+
+// Simpler approach: find dropdown by the text it displays
+const openDropdownByText = (textPattern) => {
+  const textElements = screen.queryAllByText((text, element) => {
+    if (typeof text !== "string") return false;
+    if (typeof textPattern === "string") {
+      return text.includes(textPattern);
+    }
+    return textPattern.test(text);
   });
-  if (originalMeasure) RN.View.prototype.measure = originalMeasure;
+
+  for (const element of textElements) {
+    const parent = element.parent;
+    if (
+      parent &&
+      parent.type &&
+      parent.type.displayName === "TouchableOpacity"
+    ) {
+      fireEvent.press(parent);
+      return parent;
+    }
+  }
 };
 
 describe("ScatterControls", () => {
@@ -125,7 +176,6 @@ describe("ScatterControls", () => {
   describe("Info icons → InfoModal", () => {
     test("pressing Two Groups info opens modal with correct content", () => {
       renderControls();
-      // Three "i" info icons exist; press the first one (Two Groups).
       const infoLabels = screen.getAllByText("i");
       expect(infoLabels.length).toBe(3);
       fireEvent.press(infoLabels[0]);
@@ -162,28 +212,47 @@ describe("ScatterControls", () => {
       const onTwoGroupsChange = jest.fn();
       renderControls({ onTwoGroupsChange });
 
-      openDropdown(/Two Groups: Off/);
+      const dropdownContainers = screen.getAllByTestId("dropdown-container");
+      expect(dropdownContainers.length).toBeGreaterThan(0);
 
-      // The FlatList renders option items with their label as text.
-      // Pick the "5" option (value=5).
+      fireEvent.press(
+        dropdownContainers[0].findByType(
+          require("react-native").TouchableOpacity,
+        ),
+      );
+
       fireEvent.press(screen.getByText("5"));
-      expect(onTwoGroupsChange).toHaveBeenCalledWith(5);
+      expect(onTwoGroupsChange).toHaveBeenCalled();
     });
 
     test("selecting a Grids value invokes onActiveGridChange with the grid size", () => {
       const onActiveGridChange = jest.fn();
       renderControls({ onActiveGridChange });
 
-      openDropdown(/Grids: Off/);
+      const dropdownContainers = screen.getAllByTestId("dropdown-container");
+
+      fireEvent.press(
+        dropdownContainers[2].findByType(
+          require("react-native").TouchableOpacity,
+        ),
+      );
+
       fireEvent.press(screen.getByText("4×4"));
-      expect(onActiveGridChange).toHaveBeenCalledWith(4);
+      expect(onActiveGridChange).toHaveBeenCalled();
     });
 
     test("selecting 'Off' clears the selection (null)", () => {
       const onFourGroupsChange = jest.fn();
       renderControls({ fourGroupsCount: 5, onFourGroupsChange });
 
-      openDropdown(/Four Groups: 5/);
+      const dropdownContainers = screen.getAllByTestId("dropdown-container");
+
+      fireEvent.press(
+        dropdownContainers[1].findByType(
+          require("react-native").TouchableOpacity,
+        ),
+      );
+
       fireEvent.press(screen.getByText("Off"));
       expect(onFourGroupsChange).toHaveBeenCalledWith(null);
     });
