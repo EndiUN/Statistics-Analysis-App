@@ -339,7 +339,7 @@ describe("Minitool_1 Advanced Integration Tests", () => {
       // Verify the API call happened
       await waitFor(() => {
         expect(axios.get).toHaveBeenCalledWith(
-          "http://localhost:5000/api/scenarios",
+          "https://statistics-api-4g2s.onrender.com/api/scenarios",
         );
       });
 

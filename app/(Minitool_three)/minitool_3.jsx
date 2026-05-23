@@ -28,7 +28,7 @@ import UploadScenarioModal from "../../components/UploadScenarioModal";
 import useDimensions from "../hooks/useDimensions";
 import icon from "../../assets/onlyIcon.png";
 
-const API_URL = "http://localhost:5000/api/scenarios";
+const API_URL = "https://statistics-api-4g2s.onrender.com/api/scenarios";
 const TOOL_TYPE = "minitool3";
 
 // Local presets shipped with the app, available alongside DB scenarios.

@@ -11,9 +11,7 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(",")
-      : "http://localhost:8081",
+    origin: "*",
   }),
 );
 app.use(express.json({ limit: "1mb" }));
