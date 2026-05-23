@@ -12,6 +12,7 @@ jest.mock("react-native-gesture-handler", () => {
     const methods = [
       "activeOffsetX",
       "activeOffsetY",
+      "runOnJS",
       "onBegin",
       "onStart",
       "onUpdate",
