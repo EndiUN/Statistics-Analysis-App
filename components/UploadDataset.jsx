@@ -9,9 +9,15 @@ import {
   Platform,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+import Constants from "expo-constants";
 
-// Point this at your backend server
-const API_URL = "http://localhost:5000/api/datasets/upload";
+// Resolve the API base URL from Expo config (app.json -> expo.extra.apiUrl)
+// with an env-var override for CI / production builds.
+const API_BASE =
+  process.env.EXPO_PUBLIC_API_URL ??
+  Constants.expoConfig?.extra?.apiUrl ??
+  "http://localhost:5000";
+const API_URL = `${API_BASE}/api/datasets/upload`;
 
 /**
  * UploadDataset
@@ -23,7 +29,7 @@ const API_URL = "http://localhost:5000/api/datasets/upload";
  * Props:
  *   name        – (string)  scenario name
  *   description – (string)  optional description
- *   toolType    – (string)  one of: minitool1, minitool2_cholesterol, minitool2_speedtrap, minitool3
+ *   toolType    – (string)  one of: minitool1, minitool2, minitool3
  *   onSuccess   – (fn)  callback receiving the created scenario object
  *   onError     – (fn)  callback receiving the error message string
  */

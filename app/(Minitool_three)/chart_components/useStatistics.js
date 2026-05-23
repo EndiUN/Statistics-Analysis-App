@@ -2,9 +2,6 @@ import { useMemo } from "react";
 
 // --- Pure math helpers (no React, no hooks) ---
 
-/** Sort an array of numbers ascending (returns new array). */
-const sortAsc = (arr) => [...arr].sort((a, b) => a - b);
-
 /** Median of a *pre-sorted* numeric array. */
 const medianSorted = (sorted) => {
   const n = sorted.length;
@@ -65,59 +62,68 @@ export const computeQuadrantCounts = (data, cx, cy) => {
 };
 
 // ---------------------------------------------------------------------------
+// Internal helper: bucket points into vertical slices in a single pass.
+// Returns an array of length `sliceCount` where each entry is the sorted
+// y-values of the points that fell into that slice.
+//
+// Complexity: O(n + Σ nᵢ log nᵢ) instead of O(k·n) for the previous
+// per-slice filter approach.
+// ---------------------------------------------------------------------------
+const bucketYValues = (data, sliceCount, xDomain) => {
+  const [xMin, xMax] = xDomain;
+  const sliceWidth = (xMax - xMin) / sliceCount;
+  const buckets = Array.from({ length: sliceCount }, () => []);
+
+  for (const { x, y } of data) {
+    if (x < xMin || x > xMax) continue;
+    let idx = Math.floor((x - xMin) / sliceWidth);
+    // Right edge (x === xMax) belongs to the last slice; clamp.
+    if (idx >= sliceCount) idx = sliceCount - 1;
+    if (idx < 0) idx = 0;
+    buckets[idx].push(y);
+  }
+  for (let i = 0; i < sliceCount; i++) buckets[i].sort((a, b) => a - b);
+  return { buckets, sliceWidth };
+};
+
+// ---------------------------------------------------------------------------
 // Two Equal Groups – vertical slicing with Median / Low / High per slice
 // ---------------------------------------------------------------------------
 export const computeTwoGroups = (data, sliceCount, xDomain) => {
-  const [xMin, xMax] = xDomain;
-  const sliceWidth = (xMax - xMin) / sliceCount;
-  const slices = [];
-
-  for (let i = 0; i < sliceCount; i++) {
+  const [xMin] = xDomain;
+  const { buckets, sliceWidth } = bucketYValues(data, sliceCount, xDomain);
+  return buckets.map((yVals, i) => {
     const lo = xMin + i * sliceWidth;
-    const hi = lo + sliceWidth;
-    const points = data.filter(
-      (d) => d.x >= lo && (i === sliceCount - 1 ? d.x <= hi : d.x < hi),
-    );
-    const yVals = sortAsc(points.map((d) => d.y));
-    slices.push({
+    return {
       xLo: lo,
-      xHi: hi,
+      xHi: lo + sliceWidth,
       low: yVals.length ? yVals[0] : null,
       high: yVals.length ? yVals[yVals.length - 1] : null,
       median: yVals.length ? medianSorted(yVals) : null,
       count: yVals.length,
-    });
-  }
-  return slices;
+    };
+  });
 };
 
 // ---------------------------------------------------------------------------
 // Four Equal Groups – vertical slicing with Low/Q1/Median/Q3/High per slice
 // ---------------------------------------------------------------------------
 export const computeFourGroups = (data, sliceCount, xDomain) => {
-  const [xMin, xMax] = xDomain;
-  const sliceWidth = (xMax - xMin) / sliceCount;
-  const slices = [];
-
-  for (let i = 0; i < sliceCount; i++) {
+  const [xMin] = xDomain;
+  const { buckets, sliceWidth } = bucketYValues(data, sliceCount, xDomain);
+  return buckets.map((yVals, i) => {
     const lo = xMin + i * sliceWidth;
-    const hi = lo + sliceWidth;
-    const points = data.filter(
-      (d) => d.x >= lo && (i === sliceCount - 1 ? d.x <= hi : d.x < hi),
-    );
-    const yVals = sortAsc(points.map((d) => d.y));
-    slices.push({
+    return {
       xLo: lo,
-      xHi: hi,
+      xHi: lo + sliceWidth,
       low: yVals.length ? yVals[0] : null,
       high: yVals.length ? yVals[yVals.length - 1] : null,
       q1: yVals.length >= 2 ? q1Sorted(yVals) : null,
       median: yVals.length ? medianSorted(yVals) : null,
       q3: yVals.length >= 2 ? q3Sorted(yVals) : null,
       count: yVals.length,
-    });
-  }
-  return slices;
+    };
+  });
 };
 
 // ---------------------------------------------------------------------------

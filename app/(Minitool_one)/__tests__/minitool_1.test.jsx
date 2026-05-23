@@ -339,7 +339,7 @@ describe("Minitool_1 Advanced Integration Tests", () => {
       // Verify the API call happened
       await waitFor(() => {
         expect(axios.get).toHaveBeenCalledWith(
-          "http://localhost:5000/api/scenarios",
+          "https://statistics-api-4g2s.onrender.com/api/scenarios",
         );
       });
 
@@ -954,7 +954,9 @@ describe("Minitool_1 Advanced Integration Tests", () => {
         const desktopStatsBar = screen.getByTestId("stats-bar");
         expect(desktopStatsBar).toBeTruthy();
         expect(screen.getByText("Select scenario")).toBeTruthy();
-        expect(desktopStatsBar.props.style).toMatchObject({ width: 120 });
+        expect(desktopStatsBar.props.style).toContainEqual(
+          expect.objectContaining({ width: 120 }),
+        );
       });
       const mobileStatsBar = await screen.queryByTestId("mobile-stats-bar");
       expect(mobileStatsBar).toBeNull();
@@ -989,7 +991,9 @@ describe("Minitool_1 Advanced Integration Tests", () => {
         const desktopStatsBar = screen.getByTestId("stats-bar");
         expect(desktopStatsBar).toBeTruthy();
         expect(screen.getByText("Select scenario")).toBeTruthy();
-        expect(desktopStatsBar.props.style).toMatchObject({ width: 100 });
+        expect(desktopStatsBar.props.style).toContainEqual(
+          expect.objectContaining({ width: 100 }),
+        );
       });
 
       const mobileStatsBar = await screen.queryByTestId("mobile-stats-bar");

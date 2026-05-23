@@ -73,3 +73,5 @@ export const generateGuideValues = (mode, values, opts = {}) => {
       return [];
   }
 };
+
+export default () => null;

@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
 import {
   StyleSheet,
   View,
@@ -9,6 +15,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import axios from "axios";
@@ -19,8 +26,9 @@ import Dropdown from "../../components/dropDown";
 import UniverseButton from "../../components/universeButton";
 import UploadScenarioModal from "../../components/UploadScenarioModal";
 import useDimensions from "../hooks/useDimensions";
+import icon from "../../assets/onlyIcon.png";
 
-const API_URL = "http://localhost:5000/api/scenarios";
+const API_URL = "https://statistics-api-4g2s.onrender.com/api/scenarios";
 const TOOL_TYPE = "minitool3";
 
 // Local presets shipped with the app, available alongside DB scenarios.
@@ -59,8 +67,15 @@ const Minitool_3 = () => {
   const [activeGrid, setActiveGrid] = useState(null);
   const [twoGroupsCount, setTwoGroupsCount] = useState(null);
   const [fourGroupsCount, setFourGroupsCount] = useState(null);
-  const [selectedPoint, setSelectedPoint] = useState(null);
+  const [selectedPoints, setSelectedPoints] = useState([]);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+
+  // Toggle index in/out of the multi-selection list.
+  const togglePointSelection = useCallback((index) => {
+    setSelectedPoints((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index],
+    );
+  }, []);
 
   const handleActiveGridChange = (val) => {
     setActiveGrid(val);
@@ -120,7 +135,7 @@ const Minitool_3 = () => {
   const handleSelectScenario = useCallback(async (value) => {
     if (!value) return;
     setCurrentKey(value);
-    setSelectedPoint(null);
+    setSelectedPoints([]);
 
     if (value.startsWith("local:")) {
       const key = value.slice("local:".length);
@@ -165,84 +180,194 @@ const Minitool_3 = () => {
     [fetchScenarios],
   );
 
-  const { width } = useDimensions();
+  const { width, height } = useDimensions();
 
   // --- Responsive breakpoints (memoized) ---
   const { isMobile, isTablet, isDesktop } = useMemo(() => {
-    const mobile = width <= 480;
-    const tablet = width > 480 && width < 850;
-    const desktop = width >= 850;
+    const mobile = width <= 580;
+    const tablet = width > 580 && width < 1520;
+    const desktop = width >= 1520;
     return { isMobile: mobile, isTablet: tablet, isDesktop: desktop };
   }, [width]);
 
   // Chart sizing - fits inside the screen with some breathing room
   const chartWidth = useMemo(() => {
-    const horizontalPadding = isMobile ? 20 : 40;
-    return Math.max(280, width - horizontalPadding);
+    const horizontalPadding = isMobile ? 10 : 40;
+    return Math.max(
+      280,
+      isMobile ? width - horizontalPadding : width * 0.55 - horizontalPadding,
+    );
   }, [width, isMobile]);
 
   const chartHeight = useMemo(() => {
-    if (isMobile) return 320;
-    if (isTablet) return 420;
-    return 500;
-  }, [isMobile, isTablet]);
+    return height * 0.75;
+  }, [height]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar backgroundColor="#2a7f9f" barStyle="light-content" />
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>Scatter Plot Analysis</Text>
-          <Text style={styles.subtitle}>Bivariate Data Visualization</Text>
-        </View>
+        {/* <StatusBar backgroundColor="#2a7f9f" barStyle="light-content" /> */}
         <ScrollView
           style={styles.mainContainer}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
           scrollEnabled={scrollEnabled}
         >
-          {/* Dataset selector + Upload action row */}
-          <View style={[styles.topRow, isMobile && styles.topRowMobile]}>
-            <View
-              style={[
-                styles.dropdownWrapper,
-                isMobile && styles.dropdownWrapperMobile,
-              ]}
-            >
-              <Dropdown
-                data={dropdownOptions}
-                onChange={handleSelectScenario}
-                placeholder={
-                  isLoadingScenarios
-                    ? "Loading scenarios..."
-                    : "Select scenario"
-                }
+          {isDesktop && (
+            <View style={styles.headerContainer}>
+              <Image
+                source={icon}
+                style={styles.imageContainer}
+                resizeMode="contain"
               />
-              {isLoadingScenarios && (
-                <ActivityIndicator
-                  style={styles.loadingIndicator}
-                  size="small"
-                  color="#2a7f9f"
+
+              <View style={styles.helperWrapper}>
+                <Text style={styles.title}>Scatter Plot Analysis</Text>
+
+                {/* Dataset selector + Upload action row */}
+
+                <View style={[styles.topRow, isMobile && styles.topRowMobile]}>
+                  <View
+                    style={[
+                      styles.dropdownWrapper,
+
+                      isMobile && styles.dropdownWrapperMobile,
+                    ]}
+                  >
+                    <Dropdown
+                      data={dropdownOptions}
+                      onChange={handleSelectScenario}
+                      placeholder={
+                        isLoadingScenarios
+                          ? "Loading scenarios..."
+                          : "Select scenario"
+                      }
+                    />
+
+                    {isLoadingScenarios && (
+                      <ActivityIndicator
+                        style={styles.loadingIndicator}
+                        size="small"
+                        color="#2a7f9f"
+                      />
+                    )}
+                  </View>
+
+                  <View style={[styles.uploadButtonWrapper]}>
+                    <UniverseButton
+                      title="Upload"
+                      onPress={() => setIsUploadModalVisible(true)}
+                      colorScheme="primary"
+                      containerStyles={styles.uploadButton}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <Image
+                source={icon}
+                style={styles.imageContainer}
+                resizeMode="contain"
+              />
+            </View>
+          )}
+
+          {/* --- TABLET HEADER LAYOUT --- */}
+          {isTablet && (
+            <View style={styles.headerTabletContainer}>
+              <Image
+                source={icon}
+                style={styles.subImageTablet}
+                resizeMode="contain"
+              />
+              <View style={styles.tabletContentColumn}>
+                <Text style={styles.titleTablet}>Scatter Plot Analysis</Text>
+                <View style={styles.controlsRowTablet}>
+                  <View style={styles.dropdownWrapperTablet}>
+                    <Dropdown
+                      data={dropdownOptions}
+                      onChange={handleSelectScenario}
+                      placeholder={
+                        isLoadingScenarios
+                          ? "Loading scenarios..."
+                          : "Select scenario"
+                      }
+                    />
+                    {isLoadingScenarios && (
+                      <ActivityIndicator
+                        style={styles.loadingIndicatorTablet}
+                        size="small"
+                        color="#2a7f9f"
+                      />
+                    )}
+                  </View>
+                  <View style={styles.uploadButtonWrapperTablet}>
+                    <UniverseButton
+                      title="Upload"
+                      onPress={() => setIsUploadModalVisible(true)}
+                      colorScheme="primary"
+                      containerStyles={styles.uploadButtonTablet}
+                    />
+                  </View>
+                </View>
+              </View>
+              <Image
+                source={icon}
+                style={styles.subImageTablet}
+                resizeMode="contain"
+              />
+            </View>
+          )}
+
+          {/* --- MOBILE HEADER LAYOUT --- */}
+          {isMobile && (
+            <View style={styles.headerMobileContainer}>
+              {/* First Section: 2 images stacked + label of the module */}
+              <View style={styles.mobileTopSection}>
+                <Image
+                  source={icon}
+                  style={styles.subImageMobile}
+                  resizeMode="contain"
                 />
-              )}
+                <Text style={styles.titleMobile}>Scatter Plot Analysis</Text>
+                <Image
+                  source={icon}
+                  style={styles.subImageMobile}
+                  resizeMode="contain"
+                />
+              </View>
+
+              {/* Second Section: Button + Dropdown row */}
+              <View style={styles.mobileBottomSection}>
+                <View style={styles.dropdownWrapperMobile}>
+                  <Dropdown
+                    data={dropdownOptions}
+                    onChange={handleSelectScenario}
+                    placeholder={
+                      isLoadingScenarios
+                        ? "Loading scenarios..."
+                        : "Select scenario"
+                    }
+                  />
+                  {isLoadingScenarios && (
+                    <ActivityIndicator
+                      style={styles.loadingIndicatorMobile}
+                      size="small"
+                      color="#2a7f9f"
+                    />
+                  )}
+                </View>
+                <View style={styles.uploadButtonWrapperMobile}>
+                  <UniverseButton
+                    title="Upload"
+                    onPress={() => setIsUploadModalVisible(true)}
+                    colorScheme="primary"
+                    containerStyles={styles.uploadButtonMobile}
+                  />
+                </View>
+              </View>
             </View>
-            <View
-              style={[
-                styles.uploadButtonWrapper,
-                isMobile && styles.uploadButtonWrapperMobile,
-              ]}
-            >
-              <UniverseButton
-                title="Upload"
-                onPress={() => setIsUploadModalVisible(true)}
-                colorScheme="primary"
-                containerStyles={[
-                  styles.uploadButton,
-                  isMobile && styles.uploadButtonMobile,
-                ]}
-              />
-            </View>
-          </View>
+          )}
 
           {/* Main Chart Section */}
           <View
@@ -257,34 +382,29 @@ const Minitool_3 = () => {
               activeGrid={activeGrid}
               twoGroupsCount={twoGroupsCount}
               fourGroupsCount={fourGroupsCount}
-              selectedPoint={selectedPoint}
-              onPointSelect={setSelectedPoint}
+              selectedPoints={selectedPoints}
+              onPointToggle={togglePointSelection}
               onScrollEnabled={setScrollEnabled}
+              isMobile={isMobile}
             />
           </View>
 
           {/* Controls and Info Row */}
-          <View
-            style={[
-              styles.controlsSection,
-              isMobile && styles.controlsSectionMobile,
-            ]}
-          >
-            <View style={{ flex: 1 }}>
-              <ScatterControls
-                isMobile={isMobile}
-                showCross={showCross}
-                onShowCrossChange={setShowCross}
-                hideData={hideData}
-                onHideDataChange={setHideData}
-                activeGrid={activeGrid}
-                onActiveGridChange={handleActiveGridChange}
-                twoGroupsCount={twoGroupsCount}
-                onTwoGroupsChange={handleTwoGroupsChange}
-                fourGroupsCount={fourGroupsCount}
-                onFourGroupsChange={handleFourGroupsChange}
-              />
-            </View>
+
+          <View style={{ flex: 1 }}>
+            <ScatterControls
+              isMobile={isMobile}
+              showCross={showCross}
+              onShowCrossChange={setShowCross}
+              hideData={hideData}
+              onHideDataChange={setHideData}
+              activeGrid={activeGrid}
+              onActiveGridChange={handleActiveGridChange}
+              twoGroupsCount={twoGroupsCount}
+              onTwoGroupsChange={handleTwoGroupsChange}
+              fourGroupsCount={fourGroupsCount}
+              onFourGroupsChange={handleFourGroupsChange}
+            />
           </View>
         </ScrollView>
         <UploadScenarioModal
@@ -292,7 +412,7 @@ const Minitool_3 = () => {
           onClose={() => setIsUploadModalVisible(false)}
           toolType={TOOL_TYPE}
           onSuccess={handleUploadSuccess}
-        />{" "}
+        />
       </SafeAreaView>
     </GestureHandlerRootView>
   );
@@ -304,23 +424,93 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
   headerContainer: {
-    backgroundColor: "#2a7f9f",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: "#1e5f7f",
+    backgroundColor: "#e5e7eb",
+    //paddingVertical: 15,
+    paddingHorizontal: 62,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    // flexGrow: 1,
+    // paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    //alignItems: "center",
+    //paddingBottom: 20,
+  },
+  imageContainer: {
+    height: 150,
+    width: "80%",
+    maxWidth: 150,
+    alignSelf: "center",
+  },
+  //-----------Title + DropDown + Button Wrapper---------------------
+  helperWrapper: {
+    flex: 1,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    marginHorizontal: 50,
+    //marginVertical: 44,
   },
   title: {
-    fontSize: 24,
+    color: "#002e48",
+    flexGrow: 1,
+    textAlign: "center",
+    fontSize: 32,
     fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 4,
+    //color: "#fff",
+    marginHorizontal: 12,
+    marginVertical: 14,
   },
-  subtitle: {
-    fontSize: 13,
-    color: "#e0e0e0",
+  //-------------DropDown + Button -----------------
+  topRow: {
+    flexGrow: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-evenly",
+    marginHorizontal: 12,
+    marginTop: 14,
+    //marginBottom: 12,
+    gap: 12,
+    zIndex: 100,
   },
+  topRowMobile: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  dropdownWrapper: {
+    minWidth: 400,
+    position: "relative",
+  },
+  dropdownWrapperMobile: {
+    width: "100%",
+  },
+  loadingIndicator: {
+    position: "absolute",
+    right: 50,
+    top: 16,
+  },
+  uploadButtonWrapper: {
+    // marginTop: 4,
+    marginBottom: 10,
+  },
+  uploadButtonWrapperMobile: {
+    width: "100%",
+  },
+  uploadButton: {
+    minWidth: 200,
+    minHeight: 52,
+    paddingHorizontal: 24,
+  },
+  uploadButtonMobile: {
+    width: "100%",
+    minHeight: 44,
+  },
+  //------------------------------------------------
+
   mainContainer: {
+    //paddingBottom: 210,
     flex: 1,
     backgroundColor: "#e5e7eb",
   },
@@ -329,9 +519,9 @@ const styles = StyleSheet.create({
   },
   chartSection: {
     backgroundColor: "#fff",
-    marginHorizontal: 10,
+    marginHorizontal: 40,
     marginVertical: 10,
-    borderRadius: 8,
+    borderRadius: 12,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -379,46 +569,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    gap: 12,
-    zIndex: 100,
-  },
-  topRowMobile: {
-    flexDirection: "column",
-    alignItems: "stretch",
-    paddingHorizontal: 12,
-    gap: 8,
-  },
-  dropdownWrapper: {
-    width: 300,
-    position: "relative",
-  },
-  dropdownWrapperMobile: {
-    width: "100%",
-  },
-  loadingIndicator: {
-    position: "absolute",
-    right: 50,
-    top: 16,
-  },
-  uploadButtonWrapper: {},
-  uploadButtonWrapperMobile: {
-    width: "100%",
-  },
-  uploadButton: {
-    minWidth: 140,
-    minHeight: 44,
-    paddingHorizontal: 24,
-  },
-  uploadButtonMobile: {
-    width: "100%",
-    minHeight: 44,
-  },
   chartSectionMobile: {
     marginHorizontal: 0,
   },
@@ -473,6 +623,112 @@ const styles = StyleSheet.create({
   itemText: {
     textAlign: "center",
     color: "#2563eb",
+  },
+
+  // --- Tablet Layout Styles ---
+  headerTabletContainer: {
+    backgroundColor: "#e5e7eb",
+    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    zIndex: 100,
+  },
+  subImageTablet: {
+    height: 100,
+    width: 100,
+  },
+  tabletContentColumn: {
+    flex: 1,
+    flexDirection: "column",
+    gap: 10,
+  },
+  titleTablet: {
+    color: "#002e48",
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  controlsRowTablet: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-evenly",
+    gap: 10,
+  },
+  dropdownWrapperTablet: {
+    flex: 1.5,
+    alignSelf: "center",
+    justifyContent: "space-around",
+    position: "relative",
+  },
+  uploadButtonWrapperTablet: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  uploadButtonTablet: {
+    minHeight: 52,
+    minWidth: 150,
+    maxWidth: 200,
+  },
+  loadingIndicatorTablet: {
+    position: "absolute",
+    right: 45,
+    top: 16,
+  },
+
+  // --- Mobile Layout Styles ---
+  headerMobileContainer: {
+    backgroundColor: "#e5e7eb",
+    padding: 14,
+    flexDirection: "column",
+    gap: 10,
+    zIndex: 100,
+  },
+  mobileTopSection: {
+    justifyContent: "space-evenly",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  mobileImageRow: {
+    flexDirection: "column", // Stacks images vertically
+    alignItems: "center",
+    gap: 6,
+  },
+  subImageMobile: {
+    height: 50,
+    width: 50,
+  },
+  titleMobile: {
+    color: "#002e48",
+    fontSize: 22,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  mobileBottomSection: {
+    flexDirection: "row", // Dropdown and Button side-by-side
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+  },
+  dropdownWrapperMobile: {
+    flex: 1.5,
+    position: "relative",
+  },
+  uploadButtonWrapperMobile: {
+    flex: 1,
+    marginBottom: 10,
+  },
+  uploadButtonMobile: {
+    minHeight: 52,
+    width: "100%",
+  },
+  loadingIndicatorMobile: {
+    position: "absolute",
+    right: 40,
+    top: 16,
   },
 });
 

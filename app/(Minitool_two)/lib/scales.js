@@ -39,3 +39,5 @@ export const generateAxisTicks = (scale, step) => {
   if (!ticks.some((t) => Math.abs(t - max) < 1e-9)) ticks.push(max);
   return [...new Set(ticks)].sort((a, b) => a - b);
 };
+
+export default () => null;

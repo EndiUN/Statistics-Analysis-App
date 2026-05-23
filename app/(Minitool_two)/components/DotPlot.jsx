@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import { View, Text } from 'react-native';
 import Svg, { G, Circle, Line, Text as SvgText, Rect } from 'react-native-svg';
-import Animated, { runOnJS } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { useDotPlotTools } from '../hooks/useDotPlotTools';
@@ -124,15 +124,19 @@ const DotPlotPanel = React.memo(function DotPlotPanel({
   const baseline = currentHeight - margins.bottom;
   const handleY = baseline + 17;
 
-  // Tap to add line in custom mode.
+  // Tap to add line in custom mode. .runOnJS(true) keeps the callback on
+  // the JS thread so React state updates (and JS-ref writes) are reliable
+  // on Android.
   const tapGesture = useMemo(
     () =>
-      Gesture.Tap().onEnd((event) => {
-        if (groupMode !== GROUP_MODES.CUSTOM) return;
-        const tapX = event.x - margins.left - HORIZONTAL_PADDING;
-        const clamped = Math.max(0, Math.min(tapX, renderWidth));
-        runOnJS(onAddLine)(panelKey, clamped);
-      }),
+      Gesture.Tap()
+        .runOnJS(true)
+        .onEnd((event) => {
+          if (groupMode !== GROUP_MODES.CUSTOM) return;
+          const tapX = event.x - margins.left - HORIZONTAL_PADDING;
+          const clamped = Math.max(0, Math.min(tapX, renderWidth));
+          onAddLine(panelKey, clamped);
+        }),
     [groupMode, margins.left, renderWidth, onAddLine, panelKey],
   );
 
@@ -243,7 +247,10 @@ const DotPlotPanel = React.memo(function DotPlotPanel({
                 handleY={handleY}
                 xScale={xScale}
                 dragStartRef={dragStartRef}
+                isDragging={draggingLineId === '__valueTool__'}
                 onMove={onValueToolMove}
+                onDragStart={() => onDragStart('__valueTool__')}
+                onDragEnd={onDragEnd}
               />
             )}
           </G>
@@ -275,20 +282,24 @@ const DraggableLine = React.memo(function DraggableLine({
   const isDraggable = line.isDraggable;
   const gesture = useMemo(() => {
     if (!isDraggable) return Gesture.Tap(); // no-op
+    // .runOnJS(true) is essential on Android: by default Pan callbacks are
+    // worklets running on the UI thread, where mutating dragStartRef.current
+    // silently no-ops and the line snaps to x=0 on the next update.
     return Gesture.Pan()
+      .runOnJS(true)
       .activeOffsetX([0, 0])
       .onBegin(() => {
         dragStartRef.current = line.x;
-        runOnJS(onDragStart)(line.id);
+        onDragStart(line.id);
       })
       .onUpdate((event) => {
         const x = Math.max(
           0,
           Math.min(dragStartRef.current + event.translationX, renderWidth),
         );
-        runOnJS(onMoveLine)(panelKey, line.id, x);
+        onMoveLine(panelKey, line.id, x);
       })
-      .onEnd(() => runOnJS(onDragEnd)(panelKey));
+      .onEnd(() => onDragEnd(panelKey));
   }, [
     isDraggable,
     line.id,
@@ -349,25 +360,35 @@ const ValueToolMarker = React.memo(function ValueToolMarker({
   handleY,
   xScale,
   dragStartRef,
+  isDragging,
   onMove,
+  onDragStart,
+  onDragEnd,
 }) {
+  // Keep a ref that always holds the latest pixel-x so the gesture's
+  // onBegin (which is NOT recreated on every x change) reads the
+  // up-to-date position instead of a stale closure value.
+  const latestXRef = useRef(x);
+  latestXRef.current = x;
+
   const gesture = useMemo(
     () =>
       Gesture.Pan()
+        .runOnJS(true)
         .activeOffsetX([0, 0])
         .onBegin(() => {
-          dragStartRef.current = x;
+          dragStartRef.current = latestXRef.current;
+          onDragStart?.();
         })
         .onUpdate((event) => {
           const nx = Math.max(
             0,
             Math.min(dragStartRef.current + event.translationX, renderWidth),
           );
-          runOnJS(onMove)(panelKey, nx);
-        }),
-    // x intentionally omitted — captured at gesture start via dragStartRef
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [renderWidth, panelKey, onMove, dragStartRef],
+          onMove(panelKey, nx);
+        })
+        .onEnd(() => onDragEnd?.(panelKey)),
+    [renderWidth, panelKey, onMove, onDragStart, onDragEnd, dragStartRef],
   );
 
   return (
@@ -380,23 +401,13 @@ const ValueToolMarker = React.memo(function ValueToolMarker({
         stroke="red"
         strokeWidth={2}
       />
-      <SvgText
-        x={x}
-        y={marginsTop - 18}
-        fontSize={10}
-        fill="red"
-        textAnchor="middle"
-        fontWeight="bold"
-      >
-        Value
-      </SvgText>
       <GestureDetector gesture={gesture}>
         <Rect
           x={x - HANDLE_SIZE / 2}
           y={handleY}
           width={HANDLE_SIZE}
           height={HANDLE_SIZE}
-          fill="red"
+          fill={isDragging ? 'orange' : 'red'}
           stroke="black"
           strokeWidth={1}
           rx={2}
@@ -431,11 +442,15 @@ const ValueToolMarker = React.memo(function ValueToolMarker({
  * State for the interactive tools is owned by useDotPlotTools so the chart
  * itself can rely on stable callbacks and memoised derived data.
  */
-function DotPlot({ data, settings }) {
-  const tools = useDotPlotTools({
+function DotPlot({ data, settings, tools: externalTools }) {
+  // Allow the page to lift the tools hook (so it can drive a page-level
+  // Clear-All-Lines button); fall back to an internally-owned hook for
+  // standalone usage.
+  const internalTools = useDotPlotTools({
     initialIntervalWidth: settings.initialIntervalWidth,
   });
-  const { state, actions, hasAnyLines } = tools;
+  const tools = externalTools ?? internalTools;
+  const { state, actions } = tools;
 
   // Memoise raw arrays so derived useMemo deps are referentially stable.
   const beforeValues = useMemo(() => data.before ?? [], [data.before]);
@@ -547,11 +562,7 @@ function DotPlot({ data, settings }) {
         )}
       </View>
 
-      <DotPlotControls
-        state={state}
-        actions={wrappedActions}
-        hasAnyLines={hasAnyLines}
-      />
+      <DotPlotControls state={state} actions={wrappedActions} />
     </Animated.View>
   );
 }

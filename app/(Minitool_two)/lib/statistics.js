@@ -6,6 +6,8 @@
  * so callers don't need to guard.
  */
 
+import { bisectRight } from 'd3-array';
+
 /** Returns the arithmetic mean of `values`, or 0 for an empty array. */
 export const mean = (values) => {
   if (!values || values.length === 0) return 0;
@@ -53,8 +55,13 @@ export const sortAscending = (values) => [...values].sort((a, b) => a - b);
 
 /**
  * Computes vertical "stack levels" for a dot plot so overlapping dots are
- * placed at increasing levels above the axis. Runs in O(n log n + n·L)
- * where L is the maximum stack height, which is small in practice.
+ * placed at increasing levels above the axis. Runs in O(n log n + n·L) where
+ * L is the maximum stack height (small in practice).
+ *
+ * Implementation notes:
+ *  - `levelLastX` is a Float64Array for cache-friendly linear scans.
+ *  - Each dot is allocated exactly once (no object spread per element)
+ *    so the function stays linear in allocations even for large n.
  *
  * @param {Array<{value:number, type?:string}>} data
  * @param {(v:number)=>number} xScale - maps data value -> pixel x
@@ -64,56 +71,72 @@ export const sortAscending = (values) => [...values].sort((a, b) => a - b);
 export const computeScatterLevels = (data, xScale, dotRadius) => {
   if (!data || data.length === 0) return [];
   const minDistance = dotRadius * 2;
+  const n = data.length;
 
-  // Sort by x position (stable).
-  const sorted = data
-    .map((d) => ({ ...d, x: xScale(d.value) }))
-    .sort((a, b) => a.x - b.x);
+  // Build a single working array, sort by x in place.
+  const sorted = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const d = data[i];
+    sorted[i] = { value: d.value, type: d.type, x: xScale(d.value), level: 0 };
+  }
+  sorted.sort((a, b) => a.x - b.x);
 
-  // levelLastX[k] = right-most occupied x at level k.
-  const levelLastX = [];
-  const out = new Array(sorted.length);
+  // Float64Array gives us a contiguous, primitive-typed buffer for the
+  // first-fit scan -- no boxing, friendly to the CPU prefetcher.
+  let levelLastX = new Float64Array(8);
+  let levelCount = 0;
 
-  for (let i = 0; i < sorted.length; i++) {
+  for (let i = 0; i < n; i++) {
     const dot = sorted[i];
     let level = 0;
-    while (
-      level < levelLastX.length &&
-      dot.x - levelLastX[level] < minDistance
-    ) {
+    while (level < levelCount && dot.x - levelLastX[level] < minDistance) {
       level++;
     }
+    if (level >= levelLastX.length) {
+      const grown = new Float64Array(levelLastX.length * 2);
+      grown.set(levelLastX);
+      levelLastX = grown;
+    }
     levelLastX[level] = dot.x;
-    out[i] = { ...dot, level: level + 1 }; // 1-indexed for rendering
+    if (level === levelCount) levelCount++;
+    dot.level = level + 1; // 1-indexed for rendering
   }
-  return out;
+  return sorted;
 };
 
 /**
  * Counts how many values fall inside each consecutive (left-closed,
- * right-open) bucket defined by `boundaries` in *data-space*. The final
- * bucket is right-closed so the maximum value is always included.
+ * right-open) bucket defined by `boundaries`. The final bucket is
+ * right-closed so the maximum value is always included.
+ *
+ * Uses binary search (O(n log b)) instead of a linear scan over boundaries,
+ * which matters when fixed-interval grouping produces many bins.
  *
  * @param {number[]} values
- * @param {number[]} boundaries - ascending domain values including the chart edges
+ * @param {number[]} boundaries - ascending domain values including chart edges
  * @returns {number[]} counts with length boundaries.length - 1
  */
 export const bucketCounts = (values, boundaries) => {
-  if (boundaries.length < 2) return [];
-  const counts = new Array(boundaries.length - 1).fill(0);
-  const last = boundaries.length - 2;
+  const b = boundaries.length;
+  if (b < 2) return [];
+  const counts = new Array(b - 1).fill(0);
+  const last = b - 2;
+  const lo = boundaries[0];
+  const hi = boundaries[b - 1];
+
   for (let i = 0; i < values.length; i++) {
     const v = values[i];
-    // Linear scan is fine for small boundary counts; switch to bsearch if needed.
-    for (let b = 0; b <= last; b++) {
-      const lo = boundaries[b];
-      const hi = boundaries[b + 1];
-      const inside = b === last ? v >= lo && v <= hi : v >= lo && v < hi;
-      if (inside) {
-        counts[b]++;
-        break;
-      }
+    if (v < lo || v > hi) continue;
+    if (v === hi) {
+      counts[last]++;
+      continue;
     }
+    // bisectRight returns first index `j` with boundaries[j] > v.
+    // The bucket containing v is therefore j - 1.
+    const idx = bisectRight(boundaries, v) - 1;
+    if (idx >= 0 && idx <= last) counts[idx]++;
   }
   return counts;
 };
+
+export default () => null;

@@ -19,6 +19,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install backend dependencies
+        run: npm install
+        working-directory: backend
+
       - name: Run Jest tests
         run: npm test -- --ci --json --outputFile=test-results.json
 

@@ -10,10 +10,24 @@
  * All callbacks returned by this hook are stable across renders.
  */
 
-import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useMemo, useReducer } from 'react';
 import { GROUP_MODES } from '../lib/grouping';
 
 const PANELS = ['combined', 'before', 'after'];
+
+/**
+ * Generate a stable, collision-free identifier for interactive objects
+ * (custom threshold lines). Uses native crypto.randomUUID() when available
+ * and falls back to a Math.random-based string for older runtimes.
+ */
+const makeId = () => {
+  if (typeof globalThis !== 'undefined' && globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `id-${Math.random().toString(36).slice(2)}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+};
 
 const emptyPerPanel = (factory) =>
   PANELS.reduce((acc, key) => {
@@ -55,7 +69,15 @@ const A = {
 const reducer = (state, action) => {
   switch (action.type) {
     case A.SET_GROUP_MODE:
-      return { ...state, groupMode: action.mode };
+      // Custom user-drawn lines belong to a particular grouping context;
+      // any change of mode invalidates them. Folding this consequence into
+      // the reducer (instead of a useEffect) makes the transition atomic
+      // and avoids an extra render cycle after the mode switch.
+      return {
+        ...state,
+        groupMode: action.mode,
+        thresholdLines: emptyPerPanel(() => []),
+      };
 
     case A.SET_INTERVAL_WIDTH:
       return {
@@ -153,12 +175,6 @@ export const useDotPlotTools = ({ initialIntervalWidth = 5 } = {}) => {
     initialState,
   );
 
-  // Whenever the group mode changes, custom user lines are cleared (matches
-  // legacy behaviour). Custom mode itself starts with an empty canvas.
-  useEffect(() => {
-    dispatch({ type: A.RESET_CUSTOM_LINES });
-  }, [state.groupMode]);
-
   const setGroupMode = useCallback(
     (mode) => dispatch({ type: A.SET_GROUP_MODE, mode }),
     [],
@@ -207,7 +223,7 @@ export const useDotPlotTools = ({ initialIntervalWidth = 5 } = {}) => {
     dispatch({
       type: A.ADD_LINE,
       panel,
-      line: { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, x, isDraggable: true },
+      line: { id: makeId(), x, isDraggable: true },
     });
   }, []);
 
@@ -254,3 +270,5 @@ export const useDotPlotTools = ({ initialIntervalWidth = 5 } = {}) => {
     hasAnyLines,
   };
 };
+
+export default () => null;

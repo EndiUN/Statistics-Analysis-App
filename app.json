@@ -20,7 +20,8 @@
       "adaptiveIcon": {
         "foregroundImage": "",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.statistics"
     },
     "web": {
       "favicon": "",
@@ -30,6 +31,15 @@
     "experiments": {
       "baseUrl": "/Statistics-Analysis-App"
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router"
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:5000",
+      "router": {},
+      "eas": {
+        "projectId": "b23e5ca7-24a0-45cb-bb7d-66a85243335c"
+      }
+    }
   }
 }

@@ -1,4 +1,5 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const upload = require("../config/multerConfig");
 const { uploadDataset } = require("../controllers/uploadController");
 const Scenario = require("../models/Scenario");
@@ -6,13 +7,26 @@ const Scenario = require("../models/Scenario");
 const router = express.Router();
 
 /**
+ * Rate limiter for the upload endpoint.
+ * Synchronous CSV/XLSX parsing pins the event loop, so we cap concurrent
+ * abuse at 20 uploads per IP per 15 minutes. Read endpoints are not limited.
+ */
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: "Too many uploads from this IP, please try again later.",
+  },
+});
+
+/**
  * POST /api/datasets/upload
  * Upload a CSV or Excel file, parse it, validate it, and save as a Scenario.
- *
- * The multer error handler wraps the upload middleware so that
- * file-type and file-size errors return a clean 400 instead of crashing.
  */
-router.post("/upload", (req, res, next) => {
+router.post("/upload", uploadLimiter, (req, res, next) => {
   upload.single("file")(req, res, (err) => {
     if (err) {
       // Multer-specific errors (file too large, wrong type, etc.)

@@ -1,17 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Rect, Circle, G } from "react-native-svg";
 import Animated, {
   useAnimatedReaction,
   runOnJS,
 } from "react-native-reanimated";
+import {
+  TOUGH_CELL_COLOR,
+  ALWAYS_READY_COLOR,
+  DOT_COLOR,
+  RANGE_HIGHLIGHT_COLOR,
+} from "../constants";
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 const BAR_HEIGHT = 8;
-const DOT_COLOR = "#000";
-const RANGE_HIGHLIGHT_COLOR = "#ff0000";
-const TOUGH_CELL_COLOR = "#33cc33";
-const ALWAYS_READY_COLOR = "#cc00ff";
-//const MAX_LIFESPAN = 120;
 const BAR_SPACING = 7;
 
 const BatteryBar = ({
@@ -26,31 +27,27 @@ const BatteryBar = ({
   TOP_BUFFER,
   MAX_LIFESPAN,
 }) => {
-  const yPos = (19 - index) * (BAR_HEIGHT + BAR_SPACING);
+  const yPos = index * (BAR_HEIGHT + BAR_SPACING);
   const originalColor =
     item.brand === "Tough Cell" ? TOUGH_CELL_COLOR : ALWAYS_READY_COLOR;
-  const [barColor, setBarColor] = useState(originalColor);
   const barEndPosition = (item.lifespan / MAX_LIFESPAN) * chartWidth;
 
+  const [barColor, setBarColor] = useState(originalColor);
+  const wasHighlightedRef = useRef(false);
+
+  // Only call runOnJS when highlight state actually changes (not every frame)
   useAnimatedReaction(
-    () => ({
-      isToolActive: tool,
-      start: rangeStartX.value,
-      end: rangeEndX.value,
-    }),
-    (currentRange) => {
-      "worklet";
-      if (currentRange.isToolActive) {
-        if (
-          barEndPosition >= currentRange.start &&
-          barEndPosition <= currentRange.end
-        ) {
-          runOnJS(setBarColor)(RANGE_HIGHLIGHT_COLOR);
-        } else {
-          runOnJS(setBarColor)(originalColor);
-        }
-      } else {
-        runOnJS(setBarColor)(originalColor);
+    () => {
+      if (!tool) return false;
+      return (
+        barEndPosition >= rangeStartX.value && barEndPosition <= rangeEndX.value
+      );
+    },
+    (isHighlighted, prevHighlighted) => {
+      if (isHighlighted !== prevHighlighted) {
+        runOnJS(setBarColor)(
+          isHighlighted ? RANGE_HIGHLIGHT_COLOR : originalColor,
+        );
       }
     },
     [barEndPosition, originalColor, tool],
@@ -75,16 +72,6 @@ const BatteryBar = ({
           onPress={handlePress}
         />
       )}
-      {/* {!dotsOnly && (
-        <Rect
-          x="0"
-          y={yPos}
-          width={Math.max(barEndPosition + 20, 30)}
-          height={BAR_HEIGHT + 10}
-          fill="transparent"
-          onPress={handlePress}
-        />
-      )} */}
       <Circle
         cx={barEndPosition}
         cy={yPos + BAR_HEIGHT / 2 + TOP_BUFFER}

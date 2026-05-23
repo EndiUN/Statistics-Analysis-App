@@ -24,7 +24,7 @@ const API_URL = "http://localhost:5000/api/datasets/upload";
  * Props:
  *   visible   – (bool)    whether the modal is shown
  *   onClose   – (fn)      called when the modal should close
- *   toolType  – (string)  one of: minitool1, minitool2_cholesterol, minitool2_speedtrap, minitool3
+ *   toolType  – (string)  one of: minitool1, minitool2, minitool3
  *   onSuccess – (fn)      called with the created scenario object after successful upload
  *   onError   – (fn)      optional, called with error message string
  */

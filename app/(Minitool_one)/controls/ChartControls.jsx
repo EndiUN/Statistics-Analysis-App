@@ -4,14 +4,12 @@ import { View, Text, Switch, Button, StyleSheet } from "react-native";
 /**
  * ChartControls Hook
  * Encapsulates all chart control logic including sorting, filtering, and tool toggles
- * Returns state setters and a renderControls() function for rendering
  */
 const useChartControls = (screenWidth = 800) => {
-  // Determine device type based on width
   const isMobile = screenWidth < 480;
   const isTablet = screenWidth >= 480 && screenWidth < 850;
   const isDesktop = screenWidth >= 850;
-  // --- Control state ---
+
   const [isSortedBySize, setIsSortedBySize] = useState(false);
   const [isSortedByColor, setIsSortedByColor] = useState(false);
   const [hideGreenBars, setHideGreenBars] = useState(false);
@@ -20,41 +18,14 @@ const useChartControls = (screenWidth = 800) => {
   const [valueToolActive, setValueToolActive] = useState(false);
   const [rangeToolActive, setRangeToolActive] = useState(false);
 
-  // --- Handler functions ---
   const handleSortBySize = useCallback((isActive) => {
     setIsSortedBySize(isActive);
-    // When sorting by size, turn off color sort
-    if (isActive) {
-      setIsSortedByColor(false);
-    }
+    if (isActive) setIsSortedByColor(false);
   }, []);
 
   const handleSortByColor = useCallback((isActive) => {
     setIsSortedByColor(isActive);
-    // When sorting by color, turn off size sort
-    if (isActive) {
-      setIsSortedBySize(false);
-    }
-  }, []);
-
-  const handleValueTool = useCallback((isActive) => {
-    setValueToolActive(isActive);
-  }, []);
-
-  const handleRangeTool = useCallback((isActive) => {
-    setRangeToolActive(isActive);
-  }, []);
-
-  const handleHideGreenBars = useCallback((isActive) => {
-    setHideGreenBars(isActive);
-  }, []);
-
-  const handleHidePurpleBars = useCallback((isActive) => {
-    setHidePurpleBars(isActive);
-  }, []);
-
-  const handleShowDotsOnly = useCallback((isActive) => {
-    setShowDotsOnly(isActive);
+    if (isActive) setIsSortedBySize(false);
   }, []);
 
   // --- Render component with all controls ---
@@ -66,7 +37,7 @@ const useChartControls = (screenWidth = 800) => {
           isDesktop && styles.controlsContainerDesktop,
         ]}
       >
-        {/* Group 1: Tool toggles (Value & Range tools) */}
+        {/* Group 1: Tool toggles */}
         <View
           style={[
             styles.switchControlRow,
@@ -75,15 +46,21 @@ const useChartControls = (screenWidth = 800) => {
         >
           <View style={styles.switchItem}>
             <Text style={styles.switchLabel}>Value Tool</Text>
-            <Switch value={valueToolActive} onValueChange={handleValueTool} />
+            <Switch
+              value={valueToolActive}
+              onValueChange={setValueToolActive}
+            />
           </View>
           <View style={styles.switchItem}>
             <Text style={styles.switchLabel}>Range Tool</Text>
-            <Switch value={rangeToolActive} onValueChange={handleRangeTool} />
+            <Switch
+              value={rangeToolActive}
+              onValueChange={setRangeToolActive}
+            />
           </View>
         </View>
 
-        {/* Group 2: Visibility filters (3 switches) */}
+        {/* Group 2: Visibility filters */}
         <View
           style={[
             styles.switchControlRow,
@@ -93,18 +70,15 @@ const useChartControls = (screenWidth = 800) => {
         >
           <View style={styles.switchItem}>
             <Text style={styles.switchLabel}>Hide Green</Text>
-            <Switch value={hideGreenBars} onValueChange={handleHideGreenBars} />
+            <Switch value={hideGreenBars} onValueChange={setHideGreenBars} />
           </View>
           <View style={styles.switchItem}>
             <Text style={styles.switchLabel}>Hide Purple</Text>
-            <Switch
-              value={hidePurpleBars}
-              onValueChange={handleHidePurpleBars}
-            />
+            <Switch value={hidePurpleBars} onValueChange={setHidePurpleBars} />
           </View>
           <View style={styles.switchItem}>
             <Text style={styles.switchLabel}>Dots Only</Text>
-            <Switch value={showDotsOnly} onValueChange={handleShowDotsOnly} />
+            <Switch value={showDotsOnly} onValueChange={setShowDotsOnly} />
           </View>
         </View>
 
@@ -144,6 +118,8 @@ const useChartControls = (screenWidth = 800) => {
       isSortedByColor,
       isSortedBySize,
       isDesktop,
+      handleSortByColor,
+      handleSortBySize,
     ],
   );
 
@@ -165,15 +141,6 @@ const useChartControls = (screenWidth = 800) => {
     setShowDotsOnly,
     setValueToolActive,
     setRangeToolActive,
-
-    // Handlers
-    handleSortBySize,
-    handleSortByColor,
-    handleValueTool,
-    handleRangeTool,
-    handleHideGreenBars,
-    handleHidePurpleBars,
-    handleShowDotsOnly,
 
     // Render function
     renderControls,
