@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Constants from "expo-constants";
 import {
   View,
   Text,
@@ -12,7 +13,27 @@ import {
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 
-const API_URL = "http://localhost:5000/api/datasets/upload";
+const API_URL =
+  
+    "https://statistics-api-4g2s.onrender.com/api/datasets/upload";
+
+const FILE_HINTS = {
+  minitool1: {
+    columns: "brand, lifespan",
+    example: "Tough Cell, 85",
+    note: "brand must be 'Tough Cell' or 'Always Ready'; lifespan must be a number between 1 and 130",
+  },
+  minitool2: {
+    columns: "before, after",
+    example: "120, 115",
+    note: "both columns must contain numbers",
+  },
+  minitool3: {
+    columns: "x, y",
+    example: "1.4, 3.7",
+    note: "both columns must contain numbers",
+  },
+};
 
 /**
  * UploadScenarioModal
@@ -175,6 +196,22 @@ export default function UploadScenarioModal({
             multiline
           />
 
+          {/* File format hint */}
+          {FILE_HINTS[toolType] && (
+            <View style={styles.hint}>
+              <Text style={styles.hintTitle}>Expected file format (.csv or .xlsx)</Text>
+              <Text style={styles.hintText}>
+                Required columns:{" "}
+                <Text style={styles.hintCode}>{FILE_HINTS[toolType].columns}</Text>
+              </Text>
+              <Text style={styles.hintText}>
+                Example row:{" "}
+                <Text style={styles.hintCode}>{FILE_HINTS[toolType].example}</Text>
+              </Text>
+              <Text style={styles.hintNote}>{FILE_HINTS[toolType].note}</Text>
+            </View>
+          )}
+
           {/* File picker */}
           <TouchableOpacity style={styles.pickButton} onPress={pickFile}>
             <Text style={styles.pickButtonText}>
@@ -325,5 +362,35 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     fontSize: 15,
+  },
+  hint: {
+    backgroundColor: "#eff6ff",
+    borderLeftWidth: 3,
+    borderLeftColor: "#3b82f6",
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 14,
+  },
+  hintTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1e40af",
+    marginBottom: 4,
+  },
+  hintText: {
+    fontSize: 12,
+    color: "#374151",
+    marginBottom: 2,
+  },
+  hintCode: {
+    fontFamily: "monospace",
+    fontWeight: "600",
+    color: "#1d4ed8",
+  },
+  hintNote: {
+    fontSize: 11,
+    color: "#6b7280",
+    fontStyle: "italic",
+    marginTop: 2,
   },
 });
