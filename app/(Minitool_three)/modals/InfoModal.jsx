@@ -27,9 +27,7 @@ const InfoModal = ({ visible, title, message, onClose }) => {
           <View style={styles.divider} />
           <Text style={styles.message}>{message}</Text>
           <View style={styles.divider} />
-          <View
-            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-          >
+          <View style={{ alignItems: "center" }}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>Got it</Text>
             </TouchableOpacity>
@@ -80,6 +78,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   closeButton: {
+    minHeight: 52,
     width: "50%",
     backgroundColor: "#2563eb",
     paddingVertical: 12,
