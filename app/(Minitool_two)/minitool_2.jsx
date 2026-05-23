@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -10,23 +10,23 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import axios from 'axios';
-import RNPickerSelect from 'react-native-picker-select';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import axios from "axios";
+import RNPickerSelect from "react-native-picker-select";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import UploadScenarioModal from '../../components/UploadScenarioModal';
-import { calculateCombinedExtent } from '../../data/_data';
+import UploadScenarioModal from "../../components/UploadScenarioModal";
+import { calculateCombinedExtent } from "../../data/_data";
 
-import DotPlot from './components/DotPlot';
-import LegendPanel from './components/LegendPanel';
-import { CHART_DEFAULTS, DEFAULT_PRESETS } from './config/scenarios';
+import DotPlot from "./components/DotPlot";
+import LegendPanel from "./components/LegendPanel";
+import { CHART_DEFAULTS, DEFAULT_PRESETS } from "./config/scenarios";
 
-const screenWidth = Dimensions.get('window').width;
+const screenWidth = Dimensions.get("window").width;
 const SMALL_SCREEN_THRESHOLD = 900;
-const TOOL_TYPE = 'minitool2';
-const API_URL = 'http://localhost:5000/api/scenarios';
+const TOOL_TYPE = "minitool2";
+const API_URL = "https://statistics-api-4g2s.onrender.com/api/scenarios";
 
 /**
  * Builds a chart settings object from a saved scenario record.
@@ -52,17 +52,15 @@ const adaptDbScenario = (s) => {
     data = { before: s.data.dataBefore, after: s.data.dataAfter };
   } else if (Array.isArray(s.data.dataPoints)) {
     const cols = s.data.columns || Object.keys(s.data.dataPoints[0] || {});
-    const beforeCol =
-      cols.find((c) => c.toLowerCase() === 'before') || cols[0];
-    const afterCol =
-      cols.find((c) => c.toLowerCase() === 'after') || cols[1];
+    const beforeCol = cols.find((c) => c.toLowerCase() === "before") || cols[0];
+    const afterCol = cols.find((c) => c.toLowerCase() === "after") || cols[1];
     data = {
       before: s.data.dataPoints
         .map((r) => r[beforeCol])
-        .filter((v) => typeof v === 'number'),
+        .filter((v) => typeof v === "number"),
       after: s.data.dataPoints
         .map((r) => r[afterCol])
-        .filter((v) => typeof v === 'number'),
+        .filter((v) => typeof v === "number"),
     };
   } else {
     return null;
@@ -78,11 +76,11 @@ const adaptDbScenario = (s) => {
 };
 
 const Minitool2Page = () => {
-  const [selectedScenario, setSelectedScenario] = useState('cholesterol');
+  const [selectedScenario, setSelectedScenario] = useState("cholesterol");
   const [scenarios, setScenarios] = useState(DEFAULT_PRESETS);
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(false);
   const [showScenariosModal, setShowScenariosModal] = useState(false);
-  const [scenarioName, setScenarioName] = useState('');
+  const [scenarioName, setScenarioName] = useState("");
   const [isSavingScenario, setIsSavingScenario] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
@@ -92,7 +90,7 @@ const Minitool2Page = () => {
     try {
       const response = await axios.get(API_URL);
       if (!response.data.success) {
-        console.error('Failed to fetch scenarios:', response.data.error);
+        console.error("Failed to fetch scenarios:", response.data.error);
         return;
       }
       const dbEntries = {};
@@ -104,7 +102,7 @@ const Minitool2Page = () => {
         });
       setScenarios({ ...DEFAULT_PRESETS, ...dbEntries });
     } catch (error) {
-      console.error('Error fetching scenarios:', error);
+      console.error("Error fetching scenarios:", error);
     } finally {
       setIsLoadingScenarios(false);
     }
@@ -112,7 +110,7 @@ const Minitool2Page = () => {
 
   const saveScenario = async () => {
     if (!scenarioName.trim()) {
-      alert('Please enter a scenario name');
+      alert("Please enter a scenario name");
       return;
     }
     setIsSavingScenario(true);
@@ -129,15 +127,15 @@ const Minitool2Page = () => {
         },
       });
       if (response.data.success) {
-        alert('Scenario saved successfully!');
-        setScenarioName('');
+        alert("Scenario saved successfully!");
+        setScenarioName("");
         fetchScenarios();
       } else {
-        alert('Failed to save scenario: ' + response.data.error);
+        alert("Failed to save scenario: " + response.data.error);
       }
     } catch (error) {
-      console.error('Error saving scenario:', error);
-      alert('Error saving scenario: ' + error.message);
+      console.error("Error saving scenario:", error);
+      alert("Error saving scenario: " + error.message);
     } finally {
       setIsSavingScenario(false);
     }
@@ -147,20 +145,20 @@ const Minitool2Page = () => {
     try {
       const response = await axios.delete(`${API_URL}/${scenarioId}`);
       if (!response.data.success) {
-        alert('Failed to delete scenario: ' + response.data.error);
+        alert("Failed to delete scenario: " + response.data.error);
         return;
       }
       const key = `db_${scenarioId}`;
-      if (selectedScenario === key) setSelectedScenario('cholesterol');
+      if (selectedScenario === key) setSelectedScenario("cholesterol");
       setScenarios((prev) => {
         const updated = { ...prev };
         delete updated[key];
         return updated;
       });
-      alert('Scenario deleted successfully!');
+      alert("Scenario deleted successfully!");
     } catch (error) {
-      console.error('Error deleting scenario:', error);
-      alert('Error deleting scenario: ' + error.message);
+      console.error("Error deleting scenario:", error);
+      alert("Error deleting scenario: " + error.message);
     }
   };
 
@@ -171,7 +169,9 @@ const Minitool2Page = () => {
   // --- Render ------------------------------------------------------------- //
   const active = scenarios[selectedScenario];
   const chartWidth =
-    screenWidth < SMALL_SCREEN_THRESHOLD ? screenWidth * 0.9 : screenWidth * 0.6;
+    screenWidth < SMALL_SCREEN_THRESHOLD
+      ? screenWidth * 0.9
+      : screenWidth * 0.6;
 
   const chartSettings = useMemo(
     () =>
@@ -240,10 +240,12 @@ const Minitool2Page = () => {
                   setShowScenariosModal(true);
                 }}
               >
-                <Text style={styles.databaseButtonText}>Save/Load Scenario</Text>
+                <Text style={styles.databaseButtonText}>
+                  Save/Load Scenario
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.databaseButton, { backgroundColor: '#10b981' }]}
+                style={[styles.databaseButton, { backgroundColor: "#10b981" }]}
                 onPress={() => setShowUploadModal(true)}
               >
                 <Text style={styles.databaseButtonText}>
@@ -354,81 +356,81 @@ const Minitool2Page = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f0f0f0' },
+  safeArea: { flex: 1, backgroundColor: "#f0f0f0" },
   scrollViewContent: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 20,
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
-  moduleContainer: { width: '100%', alignItems: 'center', marginBottom: 30 },
+  moduleContainer: { width: "100%", alignItems: "center", marginBottom: 30 },
   moduleTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: 'navy',
+    fontWeight: "bold",
+    color: "navy",
     marginBottom: 15,
-    textAlign: 'center',
+    textAlign: "center",
   },
   loadedScenarioText: {
     fontSize: 14,
-    color: '#007AFF',
-    fontWeight: 'bold',
+    color: "#007AFF",
+    fontWeight: "bold",
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
-  pickerContainer: { width: '90%', marginBottom: 20, zIndex: 10 },
-  pickerLabel: { fontSize: 16, fontWeight: 'bold', marginBottom: 5 },
-  chartContainer: { flex: 1, width: '100%', alignItems: 'center' },
+  pickerContainer: { width: "90%", marginBottom: 20, zIndex: 10 },
+  pickerLabel: { fontSize: 16, fontWeight: "bold", marginBottom: 5 },
+  chartContainer: { flex: 1, width: "100%", alignItems: "center" },
   databaseButtonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    width: '90%',
+    flexDirection: "row",
+    justifyContent: "center",
+    width: "90%",
     marginTop: 15,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: 10,
   },
   databaseButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  databaseButtonText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
+  databaseButtonText: { color: "white", fontWeight: "bold", fontSize: 14 },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    maxHeight: '90%',
+    maxHeight: "90%",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 10,
-    color: '#333',
+    color: "#333",
   },
   saveScenarioSection: {
     marginBottom: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   scenarioInput: {
     height: 40,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 8,
     paddingHorizontal: 12,
     marginBottom: 10,
@@ -437,52 +439,52 @@ const styles = StyleSheet.create({
   loadScenarioSection: { maxHeight: 300, marginBottom: 20 },
   scenariosList: { maxHeight: 250 },
   scenarioItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#f9f9f9',
+    borderBottomColor: "#eee",
+    backgroundColor: "#f9f9f9",
     marginBottom: 8,
     borderRadius: 8,
   },
   scenarioInfo: { flex: 1 },
-  scenarioItemName: { fontSize: 14, fontWeight: 'bold', color: '#333' },
-  scenarioActions: { flexDirection: 'row', gap: 8 },
+  scenarioItemName: { fontSize: 14, fontWeight: "bold", color: "#333" },
+  scenarioActions: { flexDirection: "row", gap: 8 },
   loadButton: {
-    backgroundColor: '#009900',
+    backgroundColor: "#009900",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
   },
   deleteButton: {
-    backgroundColor: '#cc0000',
+    backgroundColor: "#cc0000",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
   },
-  buttonText: { color: 'white', fontWeight: 'bold', fontSize: 12 },
+  buttonText: { color: "white", fontWeight: "bold", fontSize: 12 },
   loadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 20,
   },
   noScenariosText: {
-    textAlign: 'center',
-    color: '#999',
+    textAlign: "center",
+    color: "#999",
     fontSize: 14,
     paddingVertical: 20,
   },
   closeButton: {
-    backgroundColor: '#666',
+    backgroundColor: "#666",
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
   },
-  closeButtonText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
+  closeButtonText: { color: "white", fontWeight: "bold", fontSize: 14 },
 });
 
 const pickerSelectStyles = StyleSheet.create({
@@ -491,22 +493,22 @@ const pickerSelectStyles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: 'gray',
+    borderColor: "gray",
     borderRadius: 4,
-    color: 'black',
+    color: "black",
     paddingRight: 30,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   inputAndroid: {
     fontSize: 16,
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderWidth: 0.5,
-    borderColor: 'purple',
+    borderColor: "purple",
     borderRadius: 8,
-    color: 'black',
+    color: "black",
     paddingRight: 30,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
 });
 

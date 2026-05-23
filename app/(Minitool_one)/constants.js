@@ -31,5 +31,4 @@ export const TOP_BUFFER = RANGE_LABEL_OFFSET_Y + 10;
 export const SIDEBAR_WIDTH = 120;
 
 // --- API ---
-export const API_URL =
-  process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api/scenarios";
+export const API_URL = `https://statistics-api-4g2s.onrender.com/api/scenarios`;
