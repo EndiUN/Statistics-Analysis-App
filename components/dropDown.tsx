@@ -104,7 +104,12 @@ export default function Dropdown({
         </TouchableOpacity>
 
         {expanded && (
-          <Modal visible={expanded} transparent animationType="none">
+          <Modal
+            visible={expanded}
+            transparent
+            animationType="none"
+            statusBarTranslucent={true}
+          >
             <TouchableWithoutFeedback onPress={() => setExpanded(false)}>
               <View style={styles.backdrop}>
                 <View

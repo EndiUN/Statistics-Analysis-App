@@ -15,6 +15,7 @@ import {
   GestureHandlerRootView,
   ScrollView,
 } from "react-native-gesture-handler";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Animated from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import Svg, { Line, G, Text as SvgText } from "react-native-svg";
@@ -496,516 +497,522 @@ const Minitool_1 = () => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Battery Lifespan Comparison</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#e5e7eb" }}>
+        <ScrollView contentContainerStyle={styles.container}>
+          <Text style={styles.title}>Battery Lifespan Comparison</Text>
 
-        <View style={styles.legendContainer}>
-          <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendColorBox,
-                { backgroundColor: TOUGH_CELL_COLOR },
-              ]}
-            />
-            <Text>Tough Cell</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendColorBox,
-                { backgroundColor: ALWAYS_READY_COLOR },
-              ]}
-            />
-            <Text>Always Ready</Text>
-          </View>
-        </View>
-
-        {/* --- Collapsible Help Section --- */}
-        <View style={styles.collapsibleContainer}>
-          <TouchableOpacity
-            onPress={() => setIsHelpVisible(!isHelpVisible)}
-            style={styles.collapsibleHeader}
-          >
-            <Text style={styles.collapsibleHeaderText}>
-              {isHelpVisible ? "▼" : "►"} About This Battery Chart
-            </Text>
-          </TouchableOpacity>
-          {isHelpVisible && (
-            <View style={styles.collapsibleContent}>
-              <Text style={[styles.helpSectionTitle, { marginTop: 0 }]}>
-                What is this?
-              </Text>
-              <Text style={styles.helpText}>
-                This chart displays the lifespans, in hours, for batteries from
-                two different brands: Tough Cell{" "}
-                <Text style={{ color: "#33cc33", fontSize: 15 }}>■</Text> and
-                Always Ready{" "}
-                <Text style={{ color: "#cc00ff", fontSize: 15 }}>■</Text>.
-              </Text>
-
-              <Text style={styles.helpSectionTitle}>Why is it useful?</Text>
-              <Text style={styles.helpText}>
-                Comparing the two sets of data helps to visually determine if
-                one brand generally offers a longer lifespan than the other. You
-                can see how the lifespans are distributed and identify outliers.
-              </Text>
-
-              <Text style={styles.helpSectionTitle}>What can you do?</Text>
-              <View style={styles.helpList}>
-                <Text style={styles.helpListItem}>
-                  - Toggle the switches to{" "}
-                  <Text style={styles.helpTextBold}>Sort</Text> the batteries by
-                  lifespan (size) or by brand (color).
-                </Text>
-                <Text style={styles.helpListItem}>
-                  - Enable the{" "}
-                  <Text style={styles.helpTextBold}>'Value tool'</Text> and drag
-                  the red line to see the exact lifespan value at any point.
-                </Text>
-                <Text style={styles.helpListItem}>
-                  - Enable the{" "}
-                  <Text style={styles.helpTextBold}>'Range tool'</Text> to
-                  select a specific lifespan range. Drag the handles to resize
-                  the range or drag the middle to move it. The count of
-                  batteries within the range appears at the top.
-                </Text>
-                <Text style={styles.helpListItem}>
-                  - Use the buttons at the bottom to{" "}
-                  <Text style={styles.helpTextBold}>Add</Text> a new battery,{" "}
-                  <Text style={styles.helpTextBold}>Remove</Text> the last one,
-                  or <Text style={styles.helpTextBold}>Generate</Text> a whole
-                  new set of random data.
-                </Text>
-              </View>
+          <View style={styles.legendContainer}>
+            <View style={styles.legendItem}>
+              <View
+                style={[
+                  styles.legendColorBox,
+                  { backgroundColor: TOUGH_CELL_COLOR },
+                ]}
+              />
+              <Text>Tough Cell</Text>
             </View>
-          )}
-        </View>
-
-        <View
-          style={[
-            styles.scenarioLoaderContainer,
-            isMobile && styles.scenarioLoaderMobile,
-            isTablet && styles.scenarioLoaderTablet,
-          ]}
-        >
-          {/* --- Scenario Picker Dropdown --- */}
-          <View
-            style={[
-              styles.scenarioPickerContainer,
-              isMobile && styles.scenarioPickerMobile,
-              isTablet && styles.scenarioPickerTablet,
-            ]}
-          >
-            <Dropdown
-              data={[
-                ...LOCAL_SCENARIOS.map((scenario) => ({
-                  label: scenario.name,
-                  value: scenario.id,
-                })),
-                ...scenarios.map((scenario) => ({
-                  label: scenario.name,
-                  value: scenario._id,
-                })),
-              ]}
-              onChange={handleLoadScenarioFromDropdown}
-              placeholder="Select scenario"
-            />
+            <View style={styles.legendItem}>
+              <View
+                style={[
+                  styles.legendColorBox,
+                  { backgroundColor: ALWAYS_READY_COLOR },
+                ]}
+              />
+              <Text>Always Ready</Text>
+            </View>
           </View>
 
-          {/* Buttons Layout */}
+          {/* --- Collapsible Help Section --- */}
+          <View style={styles.collapsibleContainer}>
+            <TouchableOpacity
+              onPress={() => setIsHelpVisible(!isHelpVisible)}
+              style={styles.collapsibleHeader}
+            >
+              <Text style={styles.collapsibleHeaderText}>
+                {isHelpVisible ? "▼" : "►"} About This Battery Chart
+              </Text>
+            </TouchableOpacity>
+            {isHelpVisible && (
+              <View style={styles.collapsibleContent}>
+                <Text style={[styles.helpSectionTitle, { marginTop: 0 }]}>
+                  What is this?
+                </Text>
+                <Text style={styles.helpText}>
+                  This chart displays the lifespans, in hours, for batteries
+                  from two different brands: Tough Cell{" "}
+                  <Text style={{ color: "#33cc33", fontSize: 15 }}>■</Text> and
+                  Always Ready{" "}
+                  <Text style={{ color: "#cc00ff", fontSize: 15 }}>■</Text>.
+                </Text>
+
+                <Text style={styles.helpSectionTitle}>Why is it useful?</Text>
+                <Text style={styles.helpText}>
+                  Comparing the two sets of data helps to visually determine if
+                  one brand generally offers a longer lifespan than the other.
+                  You can see how the lifespans are distributed and identify
+                  outliers.
+                </Text>
+
+                <Text style={styles.helpSectionTitle}>What can you do?</Text>
+                <View style={styles.helpList}>
+                  <Text style={styles.helpListItem}>
+                    - Toggle the switches to{" "}
+                    <Text style={styles.helpTextBold}>Sort</Text> the batteries
+                    by lifespan (size) or by brand (color).
+                  </Text>
+                  <Text style={styles.helpListItem}>
+                    - Enable the{" "}
+                    <Text style={styles.helpTextBold}>'Value tool'</Text> and
+                    drag the red line to see the exact lifespan value at any
+                    point.
+                  </Text>
+                  <Text style={styles.helpListItem}>
+                    - Enable the{" "}
+                    <Text style={styles.helpTextBold}>'Range tool'</Text> to
+                    select a specific lifespan range. Drag the handles to resize
+                    the range or drag the middle to move it. The count of
+                    batteries within the range appears at the top.
+                  </Text>
+                  <Text style={styles.helpListItem}>
+                    - Use the buttons at the bottom to{" "}
+                    <Text style={styles.helpTextBold}>Add</Text> a new battery,{" "}
+                    <Text style={styles.helpTextBold}>Remove</Text> the last
+                    one, or <Text style={styles.helpTextBold}>Generate</Text> a
+                    whole new set of random data.
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
           <View
             style={[
-              styles.topButtonsContainer,
-              isMobile && styles.topButtonsContainerMobile,
-              isTablet && styles.topButtonsContainerTablet,
+              styles.scenarioLoaderContainer,
+              isMobile && styles.scenarioLoaderMobile,
+              isTablet && styles.scenarioLoaderTablet,
             ]}
           >
-            <UniverseButton
-              title="Upload"
-              onPress={() => setIsUploadModalVisible(true)}
-              colorScheme="primary"
-              containerStyles={
-                isMobile
-                  ? styles.topButtonMobile
-                  : isTablet
-                    ? styles.topButtonTablet
-                    : styles.topButton
-              }
-            />
-            <UniverseButton
-              title="ADD BAR"
-              onPress={handleAddBarButtonPress}
-              colorScheme="primary"
-              containerStyles={
-                isMobile
-                  ? styles.topButtonMobile
-                  : isTablet
-                    ? styles.topButtonTablet
-                    : styles.topButton
-              }
-            />
-            <UniverseButton
-              title="Generate"
-              onPress={() => {
-                chartControls.setRangeToolActive(false);
-                chartControls.setValueToolActive(false);
-                dataGenerationModal.handleOpenModal();
-              }}
-              colorScheme="primary"
-              containerStyles={
-                isMobile
-                  ? styles.topButtonMobile
-                  : isTablet
-                    ? styles.topButtonTablet
-                    : styles.topButton
-              }
-            />
-          </View>
-        </View>
-
-        {/* Bar chart with tools */}
-        {!dataGenerationModal.isModalVisible &&
-          !barGenerationModal.isModalVisible && (
+            {/* --- Scenario Picker Dropdown --- */}
             <View
               style={[
-                styles.chartAndStatsContainer,
-                isMobile && styles.chartAndStatsMobile,
+                styles.scenarioPickerContainer,
+                isMobile && styles.scenarioPickerMobile,
+                isTablet && styles.scenarioPickerTablet,
               ]}
             >
-              <ScrollView
-                horizontal={true}
-                scrollEnabled={SVG_WIDTH > width - EFFECTIVE_SIDEBAR_WIDTH}
-                style={[styles.chartContainer, { flex: 1, width: "100%" }]}
-                contentContainerStyle={{
-                  width: SVG_WIDTH + Y_AXIS_WIDTH,
-                  paddingRight: 0,
+              <Dropdown
+                data={[
+                  ...LOCAL_SCENARIOS.map((scenario) => ({
+                    label: scenario.name,
+                    value: scenario.id,
+                  })),
+                  ...scenarios.map((scenario) => ({
+                    label: scenario.name,
+                    value: scenario._id,
+                  })),
+                ]}
+                onChange={handleLoadScenarioFromDropdown}
+                placeholder="Select scenario"
+              />
+            </View>
+
+            {/* Buttons Layout */}
+            <View
+              style={[
+                styles.topButtonsContainer,
+                isMobile && styles.topButtonsContainerMobile,
+                isTablet && styles.topButtonsContainerTablet,
+              ]}
+            >
+              <UniverseButton
+                title="Upload"
+                onPress={() => setIsUploadModalVisible(true)}
+                colorScheme="primary"
+                containerStyles={
+                  isMobile
+                    ? styles.topButtonMobile
+                    : isTablet
+                      ? styles.topButtonTablet
+                      : styles.topButton
+                }
+              />
+              <UniverseButton
+                title="ADD BAR"
+                onPress={handleAddBarButtonPress}
+                colorScheme="primary"
+                containerStyles={
+                  isMobile
+                    ? styles.topButtonMobile
+                    : isTablet
+                      ? styles.topButtonTablet
+                      : styles.topButton
+                }
+              />
+              <UniverseButton
+                title="Generate"
+                onPress={() => {
+                  chartControls.setRangeToolActive(false);
+                  chartControls.setValueToolActive(false);
+                  dataGenerationModal.handleOpenModal();
                 }}
+                colorScheme="primary"
+                containerStyles={
+                  isMobile
+                    ? styles.topButtonMobile
+                    : isTablet
+                      ? styles.topButtonTablet
+                      : styles.topButton
+                }
+              />
+            </View>
+          </View>
+
+          {/* Bar chart with tools */}
+          {!dataGenerationModal.isModalVisible &&
+            !barGenerationModal.isModalVisible && (
+              <View
+                style={[
+                  styles.chartAndStatsContainer,
+                  isMobile && styles.chartAndStatsMobile,
+                ]}
               >
-                <View
-                  style={{
+                <ScrollView
+                  horizontal={true}
+                  scrollEnabled={SVG_WIDTH > width - EFFECTIVE_SIDEBAR_WIDTH}
+                  style={[styles.chartContainer, { flex: 1, width: "100%" }]}
+                  contentContainerStyle={{
                     width: SVG_WIDTH + Y_AXIS_WIDTH,
-                    height: SVG_HEIGHT + X_AXIS_HEIGHT,
+                    paddingRight: 0,
                   }}
                 >
-                  {/* Value tool label */}
-                  <Animated.View
-                    style={[
-                      styles.toolLabelContainer,
-                      valueTool.animatedLabelStyle,
-                    ]}
+                  <View
+                    style={{
+                      width: SVG_WIDTH + Y_AXIS_WIDTH,
+                      height: SVG_HEIGHT + X_AXIS_HEIGHT,
+                    }}
                   >
-                    <Text style={styles.toolLabelText}>
-                      {toolValue.toFixed(1)}
-                    </Text>
-                  </Animated.View>
-
-                  {/* Range tool label */}
-                  <Animated.View
-                    style={[
-                      styles.rangeLabelContainer,
-                      rangeTool.animatedRangeLabelStyle,
-                    ]}
-                  >
-                    <Text style={styles.rangeLabelText}>
-                      count: {rangeCount}
-                    </Text>
-                  </Animated.View>
-
-                  {/* SVG Chart */}
-                  <Svg
-                    width={SVG_WIDTH + Y_AXIS_WIDTH}
-                    height={SVG_HEIGHT + X_AXIS_HEIGHT}
-                    style={{ zIndex: 1 }}
-                  >
-                    <G>
-                      {/* X-Axis */}
-                      <Line
-                        x1="0"
-                        y1={chartHeight + X_AXIS_HEIGHT + TOP_BUFFER}
-                        x2={chartWidth}
-                        y2={chartHeight + X_AXIS_HEIGHT + TOP_BUFFER}
-                        stroke={AXIS_COLOR}
-                        strokeWidth="1"
-                      />
-                      {tickLabels.map(({ key, x, y, value }) => (
-                        <SvgText
-                          key={key}
-                          x={x + 5}
-                          y={y + TOP_BUFFER}
-                          fill={AXIS_COLOR}
-                          fontSize={TICK_FONT_SIZE}
-                          textAnchor="middle"
-                        >
-                          {value}
-                        </SvgText>
-                      ))}
-
-                      {/* Data Bars */}
-                      {visibleBarsToRender.map(({ item, index }) => (
-                        <BatteryBar
-                          key={`bar-${index}-${item.lifespan}`}
-                          item={item}
-                          index={index}
-                          chartWidth={chartWidth}
-                          rangeStartX={rangeTool.rangeStartX}
-                          rangeEndX={rangeTool.rangeEndX}
-                          tool={chartControls.rangeToolActive}
-                          dotsOnly={chartControls.showDotsOnly}
-                          MAX_LIFESPAN={dynamicMax}
-                          onBarPress={handleBarPress}
-                          TOP_BUFFER={TOP_BUFFER}
-                        />
-                      ))}
-
-                      {/* Range tool */}
-                      {rangeTool.renderRangeTool()}
-
-                      {/* Value tool */}
-                      {valueTool.renderValueTool()}
-
-                      {/* Y-Axis */}
-                      <Line
-                        x1={0}
-                        y1={0}
-                        x2={0}
-                        y2={chartHeight + X_AXIS_HEIGHT + TOP_BUFFER}
-                        stroke={AXIS_COLOR}
-                        strokeWidth="1"
-                      />
-                    </G>
-                  </Svg>
-                </View>
-              </ScrollView>
-
-              {/* --- Stats Section --- */}
-              {isMobile ? (
-                <View testID="mobile-stats-bar" style={styles.statsBarMobile}>
-                  <View style={styles.statItemMobile}>
-                    <Text style={styles.statLabelMobile}>Amount</Text>
-                    <Text
-                      testID="mobile-stat-amount"
-                      style={styles.statValueMobile}
-                    >
-                      {barCount}
-                    </Text>
-                  </View>
-                  <View style={[styles.statItemMobile, styles.statItemBorder]}>
-                    <Text style={styles.statLabelMobile}>Min</Text>
-                    <Text
-                      testID="mobile-stat-min"
-                      style={styles.statValueMobile}
-                    >
-                      {minLifespan}
-                    </Text>
-                  </View>
-                  <View style={styles.statItemMobile}>
-                    <Text style={styles.statLabelMobile}>Max</Text>
-                    <Text
-                      testID="mobile-stat-max"
-                      style={styles.statValueMobile}
-                    >
-                      {maxLifespan}
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <View
-                  testID="stats-bar"
-                  style={[
-                    styles.statsSidebar,
-                    {
-                      width: EFFECTIVE_SIDEBAR_WIDTH,
-                      height: Math.max(SVG_HEIGHT, 250),
-                      padding: isTablet ? 10 : 15,
-                      marginTop: X_AXIS_HEIGHT / 2,
-                    },
-                  ]}
-                >
-                  <View style={styles.statsSidebarCenter}>
-                    <Text
+                    {/* Value tool label */}
+                    <Animated.View
                       style={[
-                        styles.statLabel,
-                        { fontSize: isTablet ? 10 : 12 },
+                        styles.toolLabelContainer,
+                        valueTool.animatedLabelStyle,
                       ]}
                     >
-                      Amount
-                    </Text>
-                    <Text
-                      testID="stat-amount"
-                      style={[
-                        styles.statAmountValue,
-                        { fontSize: isTablet ? 24 : 32 },
-                      ]}
-                    >
-                      {barCount}
-                    </Text>
-                  </View>
-
-                  <View style={styles.statsSidebarBottom}>
-                    <View style={{ marginBottom: 8 }}>
-                      <Text
-                        style={[
-                          styles.statMinMaxLabel,
-                          { fontSize: isTablet ? 9 : 11 },
-                        ]}
-                      >
-                        Min
+                      <Text style={styles.toolLabelText}>
+                        {toolValue.toFixed(1)}
                       </Text>
+                    </Animated.View>
+
+                    {/* Range tool label */}
+                    <Animated.View
+                      style={[
+                        styles.rangeLabelContainer,
+                        rangeTool.animatedRangeLabelStyle,
+                      ]}
+                    >
+                      <Text style={styles.rangeLabelText}>
+                        count: {rangeCount}
+                      </Text>
+                    </Animated.View>
+
+                    {/* SVG Chart */}
+                    <Svg
+                      width={SVG_WIDTH + Y_AXIS_WIDTH}
+                      height={SVG_HEIGHT + X_AXIS_HEIGHT}
+                      style={{ zIndex: 1 }}
+                    >
+                      <G>
+                        {/* X-Axis */}
+                        <Line
+                          x1="0"
+                          y1={chartHeight + X_AXIS_HEIGHT + TOP_BUFFER}
+                          x2={chartWidth}
+                          y2={chartHeight + X_AXIS_HEIGHT + TOP_BUFFER}
+                          stroke={AXIS_COLOR}
+                          strokeWidth="1"
+                        />
+                        {tickLabels.map(({ key, x, y, value }) => (
+                          <SvgText
+                            key={key}
+                            x={x + 5}
+                            y={y + TOP_BUFFER}
+                            fill={AXIS_COLOR}
+                            fontSize={TICK_FONT_SIZE}
+                            textAnchor="middle"
+                          >
+                            {value}
+                          </SvgText>
+                        ))}
+
+                        {/* Data Bars */}
+                        {visibleBarsToRender.map(({ item, index }) => (
+                          <BatteryBar
+                            key={`bar-${index}-${item.lifespan}`}
+                            item={item}
+                            index={index}
+                            chartWidth={chartWidth}
+                            rangeStartX={rangeTool.rangeStartX}
+                            rangeEndX={rangeTool.rangeEndX}
+                            tool={chartControls.rangeToolActive}
+                            dotsOnly={chartControls.showDotsOnly}
+                            MAX_LIFESPAN={dynamicMax}
+                            onBarPress={handleBarPress}
+                            TOP_BUFFER={TOP_BUFFER}
+                          />
+                        ))}
+
+                        {/* Range tool */}
+                        {rangeTool.renderRangeTool()}
+
+                        {/* Value tool */}
+                        {valueTool.renderValueTool()}
+
+                        {/* Y-Axis */}
+                        <Line
+                          x1={0}
+                          y1={0}
+                          x2={0}
+                          y2={chartHeight + X_AXIS_HEIGHT + TOP_BUFFER}
+                          stroke={AXIS_COLOR}
+                          strokeWidth="1"
+                        />
+                      </G>
+                    </Svg>
+                  </View>
+                </ScrollView>
+
+                {/* --- Stats Section --- */}
+                {isMobile ? (
+                  <View testID="mobile-stats-bar" style={styles.statsBarMobile}>
+                    <View style={styles.statItemMobile}>
+                      <Text style={styles.statLabelMobile}>Amount</Text>
                       <Text
-                        testID="stat-min"
-                        style={[
-                          styles.statMinValue,
-                          { fontSize: isTablet ? 14 : 16 },
-                        ]}
+                        testID="mobile-stat-amount"
+                        style={styles.statValueMobile}
+                      >
+                        {barCount}
+                      </Text>
+                    </View>
+                    <View
+                      style={[styles.statItemMobile, styles.statItemBorder]}
+                    >
+                      <Text style={styles.statLabelMobile}>Min</Text>
+                      <Text
+                        testID="mobile-stat-min"
+                        style={styles.statValueMobile}
                       >
                         {minLifespan}
                       </Text>
                     </View>
-                    <View>
+                    <View style={styles.statItemMobile}>
+                      <Text style={styles.statLabelMobile}>Max</Text>
                       <Text
-                        style={[
-                          styles.statMinMaxLabel,
-                          { fontSize: isTablet ? 9 : 11 },
-                        ]}
-                      >
-                        Max
-                      </Text>
-                      <Text
-                        testID="stat-max"
-                        style={[
-                          styles.statMaxValue,
-                          { fontSize: isTablet ? 14 : 16 },
-                        ]}
+                        testID="mobile-stat-max"
+                        style={styles.statValueMobile}
                       >
                         {maxLifespan}
                       </Text>
                     </View>
                   </View>
-                </View>
-              )}
-            </View>
-          )}
-        <Text style={styles.xAxisTitle}>Life Span (hours)</Text>
-
-        {/* Chart Controls */}
-        {chartControls.renderControls()}
-
-        {/* Save Scenario Button */}
-        <View style={styles.databaseButtonContainer}>
-          <View style={styles.buttonWrapper}>
-            <Button
-              title="Manage Scenarios"
-              onPress={() => setShowScenariosModal(true)}
-              color="#0066cc"
-            />
-          </View>
-        </View>
-
-        {/* Modals */}
-        {dataGenerationModal.renderModal()}
-        {barGenerationModal.renderModal()}
-
-        <UploadScenarioModal
-          visible={isUploadModalVisible}
-          onClose={() => setIsUploadModalVisible(false)}
-          toolType="minitool1"
-          onSuccess={handleUploadSuccess}
-          onError={(err) => console.error("Upload Error:", err)}
-        />
-
-        <BarInfoModal
-          visible={isBarInfoModalVisible}
-          barData={selectedBar}
-          onClose={handleCloseBarInfoModal}
-          onDelete={handleDeleteBar}
-        />
-
-        {/* Scenarios Management Modal */}
-        <Modal
-          visible={showScenariosModal}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setShowScenariosModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <ScrollView style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Manage Scenarios</Text>
-
-              <View style={styles.saveScenarioSection}>
-                <Text style={styles.sectionTitle}>Save Current Scenario</Text>
-                <TextInput
-                  style={styles.scenarioInput}
-                  placeholder="Enter scenario name..."
-                  value={scenarioName}
-                  onChangeText={setScenarioName}
-                  editable={!isSavingScenario}
-                />
-                <TextInput
-                  style={[
-                    styles.scenarioInput,
-                    styles.scenarioDescriptionInput,
-                  ]}
-                  placeholder="Enter scenario description (optional)..."
-                  value={scenarioDescription}
-                  onChangeText={setScenarioDescription}
-                  editable={!isSavingScenario}
-                  multiline={true}
-                  numberOfLines={3}
-                />
-                <Button
-                  title={isSavingScenario ? "Saving..." : "Save Scenario"}
-                  onPress={saveScenario}
-                  disabled={isSavingScenario}
-                  color="#0066cc"
-                />
-              </View>
-
-              {/* Display Saved Scenarios */}
-              <View style={styles.scenariosListSection}>
-                <Text style={styles.sectionTitle}>Saved Scenarios</Text>
-                {scenarios.length > 0 ? (
-                  <View>
-                    {scenarios.map((scenario) => (
-                      <View
-                        key={scenario._id}
-                        style={styles.scenarioItemContainer}
-                      >
-                        <View style={styles.scenarioItemContent}>
-                          <Text style={styles.scenarioItemName}>
-                            {scenario.name}
-                          </Text>
-                          <Text style={styles.scenarioItemDescription}>
-                            {scenario.description || "No description"}
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          onPress={() => deleteScenario(scenario._id)}
-                          style={styles.deleteScenarioButton}
-                        >
-                          <Text style={styles.deleteScenarioButtonText}>
-                            Delete
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
                 ) : (
-                  <Text style={styles.noScenariosText}>
-                    No saved scenarios yet
-                  </Text>
+                  <View
+                    testID="stats-bar"
+                    style={[
+                      styles.statsSidebar,
+                      {
+                        width: EFFECTIVE_SIDEBAR_WIDTH,
+                        height: Math.max(SVG_HEIGHT, 250),
+                        padding: isTablet ? 10 : 15,
+                        marginTop: X_AXIS_HEIGHT / 2,
+                      },
+                    ]}
+                  >
+                    <View style={styles.statsSidebarCenter}>
+                      <Text
+                        style={[
+                          styles.statLabel,
+                          { fontSize: isTablet ? 10 : 12 },
+                        ]}
+                      >
+                        Amount
+                      </Text>
+                      <Text
+                        testID="stat-amount"
+                        style={[
+                          styles.statAmountValue,
+                          { fontSize: isTablet ? 24 : 32 },
+                        ]}
+                      >
+                        {barCount}
+                      </Text>
+                    </View>
+
+                    <View style={styles.statsSidebarBottom}>
+                      <View style={{ marginBottom: 8 }}>
+                        <Text
+                          style={[
+                            styles.statMinMaxLabel,
+                            { fontSize: isTablet ? 9 : 11 },
+                          ]}
+                        >
+                          Min
+                        </Text>
+                        <Text
+                          testID="stat-min"
+                          style={[
+                            styles.statMinValue,
+                            { fontSize: isTablet ? 14 : 16 },
+                          ]}
+                        >
+                          {minLifespan}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text
+                          style={[
+                            styles.statMinMaxLabel,
+                            { fontSize: isTablet ? 9 : 11 },
+                          ]}
+                        >
+                          Max
+                        </Text>
+                        <Text
+                          testID="stat-max"
+                          style={[
+                            styles.statMaxValue,
+                            { fontSize: isTablet ? 14 : 16 },
+                          ]}
+                        >
+                          {maxLifespan}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
                 )}
               </View>
+            )}
+          <Text style={styles.xAxisTitle}>Life Span (hours)</Text>
 
-              <TouchableOpacity
-                onPress={() => setShowScenariosModal(false)}
-                style={styles.closeButton}
-              >
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
-            </ScrollView>
+          {/* Chart Controls */}
+          {chartControls.renderControls()}
+
+          {/* Save Scenario Button */}
+          <View style={styles.databaseButtonContainer}>
+            <View style={styles.buttonWrapper}>
+              <Button
+                title="Manage Scenarios"
+                onPress={() => setShowScenariosModal(true)}
+                color="#0066cc"
+              />
+            </View>
           </View>
-        </Modal>
-      </ScrollView>
+
+          {/* Modals */}
+          {dataGenerationModal.renderModal()}
+          {barGenerationModal.renderModal()}
+
+          <UploadScenarioModal
+            visible={isUploadModalVisible}
+            onClose={() => setIsUploadModalVisible(false)}
+            toolType="minitool1"
+            onSuccess={handleUploadSuccess}
+            onError={(err) => console.error("Upload Error:", err)}
+          />
+
+          <BarInfoModal
+            visible={isBarInfoModalVisible}
+            barData={selectedBar}
+            onClose={handleCloseBarInfoModal}
+            onDelete={handleDeleteBar}
+          />
+
+          {/* Scenarios Management Modal */}
+          <Modal
+            visible={showScenariosModal}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setShowScenariosModal(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <ScrollView style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Manage Scenarios</Text>
+
+                <View style={styles.saveScenarioSection}>
+                  <Text style={styles.sectionTitle}>Save Current Scenario</Text>
+                  <TextInput
+                    style={styles.scenarioInput}
+                    placeholder="Enter scenario name..."
+                    value={scenarioName}
+                    onChangeText={setScenarioName}
+                    editable={!isSavingScenario}
+                  />
+                  <TextInput
+                    style={[
+                      styles.scenarioInput,
+                      styles.scenarioDescriptionInput,
+                    ]}
+                    placeholder="Enter scenario description (optional)..."
+                    value={scenarioDescription}
+                    onChangeText={setScenarioDescription}
+                    editable={!isSavingScenario}
+                    multiline={true}
+                    numberOfLines={3}
+                  />
+                  <Button
+                    title={isSavingScenario ? "Saving..." : "Save Scenario"}
+                    onPress={saveScenario}
+                    disabled={isSavingScenario}
+                    color="#0066cc"
+                  />
+                </View>
+
+                {/* Display Saved Scenarios */}
+                <View style={styles.scenariosListSection}>
+                  <Text style={styles.sectionTitle}>Saved Scenarios</Text>
+                  {scenarios.length > 0 ? (
+                    <View>
+                      {scenarios.map((scenario) => (
+                        <View
+                          key={scenario._id}
+                          style={styles.scenarioItemContainer}
+                        >
+                          <View style={styles.scenarioItemContent}>
+                            <Text style={styles.scenarioItemName}>
+                              {scenario.name}
+                            </Text>
+                            <Text style={styles.scenarioItemDescription}>
+                              {scenario.description || "No description"}
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => deleteScenario(scenario._id)}
+                            style={styles.deleteScenarioButton}
+                          >
+                            <Text style={styles.deleteScenarioButtonText}>
+                              Delete
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={styles.noScenariosText}>
+                      No saved scenarios yet
+                    </Text>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => setShowScenariosModal(false)}
+                  style={styles.closeButton}
+                >
+                  <Text style={styles.closeButtonText}>Close</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </Modal>
+        </ScrollView>
+      </SafeAreaView>
     </GestureHandlerRootView>
   );
 };
