@@ -102,15 +102,15 @@ const useValueTool = ({
   const renderValueTool = () => (
     <AnimatedG animatedProps={valueToolContainerAnimatedProps}>
       <AnimatedLine
-        y1={-5}
-        y2={chartHeight + X_AXIS_HEIGHT + TOP_BUFFER}
+        y1={TOP_BUFFER}
+        y2={chartHeight + X_AXIS_HEIGHT + TOP_BUFFER + 15}
         stroke={toolColor}
         strokeWidth="2"
         animatedProps={animatedValueLineProps}
       />
       <GestureDetector gesture={panGesture}>
         <AnimatedRect
-          y={chartHeight + X_AXIS_HEIGHT + TOP_BUFFER}
+          y={chartHeight + X_AXIS_HEIGHT + TOP_BUFFER + 15}
           height="15"
           width="15"
           fill={toolColor}

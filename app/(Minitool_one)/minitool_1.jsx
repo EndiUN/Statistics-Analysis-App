@@ -92,6 +92,7 @@ const Minitool_1 = () => {
   const [selectedScenarioId, setSelectedScenarioId] = useState(null);
   const [showScenariosModal, setShowScenariosModal] = useState(false);
   const [scenarioName, setScenarioName] = useState("");
+  const [scenarioDescription, setScenarioDescription] = useState("");
   const [isSavingScenario, setIsSavingScenario] = useState(false);
   const [loadedScenarioName, setLoadedScenarioName] = useState(null);
 
@@ -154,7 +155,7 @@ const Minitool_1 = () => {
   } = useMemo(() => {
     // Data-driven height: sized to actual bar count, not fixed 20
     const height = Math.max(10, barCount * (BAR_HEIGHT + 2 * BAR_SPACING));
-    const svgHeight = height + X_AXIS_HEIGHT + TOP_BUFFER;
+    const svgHeight = height + X_AXIS_HEIGHT + TOP_BUFFER + 15;
 
     const maxValInData =
       displayedData.length > 0
@@ -354,7 +355,7 @@ const Minitool_1 = () => {
       setIsSavingScenario(true);
       const payload = {
         name: scenarioName,
-        description: "",
+        description: scenarioDescription,
         toolType: "minitool1",
         data: {
           bars: currentBatteryData,
@@ -371,6 +372,7 @@ const Minitool_1 = () => {
 
         // Reset UI state
         setScenarioName("");
+        setScenarioDescription("");
         setShowScenariosModal(false);
       }
     } catch (error) {
@@ -892,7 +894,7 @@ const Minitool_1 = () => {
         <View style={styles.databaseButtonContainer}>
           <View style={styles.buttonWrapper}>
             <Button
-              title="Save Current Scenario"
+              title="Manage Scenarios"
               onPress={() => setShowScenariosModal(true)}
               color="#0066cc"
             />
@@ -926,7 +928,7 @@ const Minitool_1 = () => {
           onRequestClose={() => setShowScenariosModal(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <ScrollView style={styles.modalContent}>
               <Text style={styles.modalTitle}>Manage Scenarios</Text>
 
               <View style={styles.saveScenarioSection}>
@@ -938,6 +940,18 @@ const Minitool_1 = () => {
                   onChangeText={setScenarioName}
                   editable={!isSavingScenario}
                 />
+                <TextInput
+                  style={[
+                    styles.scenarioInput,
+                    styles.scenarioDescriptionInput,
+                  ]}
+                  placeholder="Enter scenario description (optional)..."
+                  value={scenarioDescription}
+                  onChangeText={setScenarioDescription}
+                  editable={!isSavingScenario}
+                  multiline={true}
+                  numberOfLines={3}
+                />
                 <Button
                   title={isSavingScenario ? "Saving..." : "Save Scenario"}
                   onPress={saveScenario}
@@ -946,13 +960,49 @@ const Minitool_1 = () => {
                 />
               </View>
 
+              {/* Display Saved Scenarios */}
+              <View style={styles.scenariosListSection}>
+                <Text style={styles.sectionTitle}>Saved Scenarios</Text>
+                {scenarios.length > 0 ? (
+                  <View>
+                    {scenarios.map((scenario) => (
+                      <View
+                        key={scenario._id}
+                        style={styles.scenarioItemContainer}
+                      >
+                        <View style={styles.scenarioItemContent}>
+                          <Text style={styles.scenarioItemName}>
+                            {scenario.name}
+                          </Text>
+                          <Text style={styles.scenarioItemDescription}>
+                            {scenario.description || "No description"}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => deleteScenario(scenario._id)}
+                          style={styles.deleteScenarioButton}
+                        >
+                          <Text style={styles.deleteScenarioButtonText}>
+                            Delete
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.noScenariosText}>
+                    No saved scenarios yet
+                  </Text>
+                )}
+              </View>
+
               <TouchableOpacity
                 onPress={() => setShowScenariosModal(false)}
                 style={styles.closeButton}
               >
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           </View>
         </Modal>
       </ScrollView>
@@ -1273,6 +1323,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     padding: 20,
     maxHeight: "90%",
+    flexGrow: 1,
   },
   modalTitle: {
     fontSize: 20,
@@ -1301,6 +1352,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontSize: 14,
   },
+  scenarioDescriptionInput: {
+    height: 80,
+    textAlignVertical: "top",
+    paddingVertical: 10,
+  },
   closeButton: {
     backgroundColor: "#666",
     paddingVertical: 12,
@@ -1312,6 +1368,57 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
     fontSize: 14,
+  },
+  // --- Scenarios List Section ---
+  scenariosListSection: {
+    marginBottom: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  scenarioItemContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  scenarioItemContent: {
+    flex: 1,
+    marginRight: 10,
+  },
+  scenarioItemName: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+  },
+  scenarioItemDescription: {
+    fontSize: 12,
+    color: "#666",
+  },
+  deleteScenarioButton: {
+    backgroundColor: "#dc2626",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  deleteScenarioButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 12,
+  },
+  noScenariosText: {
+    fontSize: 14,
+    color: "#999",
+    fontStyle: "italic",
+    textAlign: "center",
+    paddingVertical: 20,
   },
 });
 
