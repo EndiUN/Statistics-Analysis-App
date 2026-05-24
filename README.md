@@ -62,30 +62,44 @@ npm run start
 
 ## Data Format
 
+Scenarios can be uploaded as `.csv` or `.xlsx` files via the **Upload from File** button in each minitool. The required columns differ per tool.
+
 ### Minitool 1: Life Span of Batteries
 
-Objects that include value and label properties.
-```
-Example: [
-  {value: 10, label: "Tough cell"},
-  {value: 20, label: "Always Ready"},
-  {value: 30, label: "Tough cell"},
-  {value: 40, label: "Always Ready"},
-  ...
-  ]
+Two required columns: `brand` and `lifespan`.
+
+- `brand` — must be exactly `Tough Cell` or `Always Ready` (case-sensitive)
+- `lifespan` — numeric value between 1 and 130
+
+```csv
+brand,lifespan
+Tough Cell,85
+Always Ready,90
+Tough Cell,72
+Always Ready,68
 ```
 
 ### Minitool 2: Speed trap scenario, Cholesterol Level
 
-Values of individual records in brackets, separated by comma
+Two required columns: `before` and `after`. Both must contain numeric values. A row may leave one column empty as long as the other has a value.
 
-```
-Example: [10,20,30...]
+```csv
+before,after
+200,180
+210,190
+195,172
 ```
 
 ### Minitool 3: Bivariate Scatter & Partitioning
 
-## ...
+Two required columns: `x` and `y`. Both must contain numeric values.
+
+```csv
+x,y
+1.4,3.7
+2.1,5.0
+3.8,7.2
+```
 
 ## Sample Data
 
